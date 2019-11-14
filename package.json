@@ -1,6 +1,6 @@
 {
   "name": "@netazoic/njs-grid",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "main": "dist/prd/njs-grid.umd.min.js",
   "scripts": {

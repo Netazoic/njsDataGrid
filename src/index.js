@@ -1,9 +1,11 @@
 import Vue from 'vue'
-import DataGrid from './components/DataGrid.vue'
+import njsGrid from "./njsGrid.vue";
 
 Vue.config.productionTip = false
 
-export default {
-	name: "njs-grid",
-	components: { DataGrid }
-}
+const vm = new Vue({
+  components: { njsGrid }
+})//.$mount('#app')
+
+
+export { njsGrid }

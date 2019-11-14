@@ -7,7 +7,7 @@ module.exports = {
             ? '/app/njs-grid/dist/prd'
             : '/app/njs-grid/dist/dev',
     pages: {
-        'njs-grid': 'src/main.js'
+        'njs-grid': 'src/index.js'
     },
     chainWebpack: config => {
         config.externals({

@@ -1,22 +1,22 @@
 <template>
   <div id="app">
-      <data-grid :gridCode="gridCode"
+      <njs-grid :gridCode="gridCode"
         :colDefs="colDefs"
         :dataURL="dataURL"
         :dataDef="dataDef"
         :p-filter="searchQuery">
-      </data-grid>
+      </njs-grid>
   </div>
 </template>
 
 <script>
 import Vue from "vue";
-import DataGrid from "./components/DataGrid.vue";
+import njsGrid from "./njsGrid.vue";
 
 export default {
-  name: "svcmgr",
+  name: "njs-sample-app",
   components: {
-    DataGrid
+    njsGrid
   },
   props: ["pGridCode"],
   data: function() {

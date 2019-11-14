@@ -6,6 +6,8 @@
       <button @click.prevent.stop="deleteRows">Delete</button>
       <button @click.prevent.stop="resetGrid">Reset</button>
       Search <input name="query" v-model="filterKey"/>
+      Rows:
+      <select v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="10000000">All</option></select>
   </form>
   <table>
     <thead>
@@ -26,7 +28,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(row,idx) in filteredData" :key="row.pk" 
+      <tr v-for="(row,idx) in filteredData" :key="row[pk]" 
           class="table-data" 
           :class="{'selected': selectedRows[idx], 'grid-lines':flgGridLines}"
           :ref="'tr-data-' + idx">
@@ -39,8 +41,8 @@
           :tabindex=" ((idx+1) *100) + col.colIdx" 
           @focus="setFocus(row,col.colName, idx)"
           ><data-element
-            :hasFocus="hasFocus(row,col.colName)"
-            @focus="setFocus(row,col.colName, idx)"
+            :hasFocus="hasFocus(idx,col.colName)==true"
+            @focusx="setFocus(row,col.colName, idx)"
             @blur="clearFocus(idx)"
             @update="noteUpdate(row,col,idx)"
             @change="noteUpdate(row,col,idx)"
@@ -82,17 +84,18 @@
 </template>
 <script>
 import Vue from "vue";
-import DataElement from "./DataElement.vue";
-import as from "@/lib/libAsync";
+import DataElement from "./components/DataElement.vue";
+import as from "./lib/libAsync";
 import { stringify } from "querystring";
 
 export default {
-  name: "DataGrid",
+  name: "njsGrid",
   props: {
     pFilter: String,
     colDefs: Array,
     dataURL: String,
-    dataDef: Array
+    dataDef: Array,
+    pDispRows: Number
   },
   components: { DataElement },
   data: function() {
@@ -109,6 +112,7 @@ export default {
       i_gridData: [],
       selectedRows: {},
       sortKey: "",
+      numDispRows: this.pDispRows || 50,
       xfocusRow: 0,
       flgDebug: 1,
       flgLocalControls: true,
@@ -118,7 +122,9 @@ export default {
       filterKey: this.filterKey,
       sortOrders: sortOrders,
       debugData: "showData",
-      idxAdd: 0
+      idxAdd: 0,
+      focusRow: 0,
+      focusColumn: 0
     };
   },
   created() {
@@ -131,6 +137,9 @@ export default {
     },
     data(newVal) {
       // console.log("data: " + newVal);
+    },
+    dataURL(newVal) {
+      this.getGridData(newVal);
     },
     sortOrders() {
       // console.log("sortOrders:");
@@ -163,7 +172,13 @@ export default {
         });
       }
       //this.flgDirty = false;
+      heroes = heroes.slice(0, this.numDispRows);
       return heroes;
+    },
+    pk() {
+      return this.colDefs.filter(function(el) {
+        return el.pk;
+      });
     }
   },
   filters: {
@@ -195,12 +210,8 @@ export default {
     },
 
     clearFocus: function(idx) {
-      const lbl = "flgFocus";
-      let row = this.filteredData[this.xfocusRow];
-      if (!row) return;
-      if (this.flgDebug >= 2)
-        console.log("clearFocus: " + idx + ": " + this.xfocusRow);
-      Vue.set(row, lbl, null);
+      this.focusRow = null;
+      this.focusColumn = null;
     },
 
     clearSelected: function() {
@@ -243,27 +254,30 @@ export default {
       return difference;
     },
 
-    getGridData(dataDef, gridDataURL) {
+    getGridData(gridDataURL, dataDef) {
       if (dataDef) {
         this.gridData = dataDef;
         this._gridData = dataDef;
       } else {
-        if (gridDataURL == null) throw new Error("No data url specified");
+        if (gridDataURL == null) return; // throw new Error("No data url specified");
         const vm = this;
         this.$http.get(gridDataURL).then(response => {
-          vm.data = response.data;
+          var recs =
+            response.data && response.data.items
+              ? response.data.items
+              : response.data;
+          vm.data = recs;
           // vm.i_gridData = JSON.parse(JSON.stringify(vm.data)); //Save a copy
           vm.i_gridData = vm.data.slice(0);
         });
       }
     },
-    hasFocus: function(row, colName) {
-      const lbl = "flgFocus";
-      return row[lbl] == colName;
+    hasFocus: function(idx, colName) {
+      return this.focusRow == idx && this.focusColumn == colName;
     },
     initGrid() {
       // this.setGridColumns(this.colDefs);
-      this.getGridData(this.dataDef, this.dataURL);
+      this.getGridData(this.dataURL, this.dataDef);
     },
     resetGrid() {
       // Reset to original condition on page load
@@ -294,16 +308,18 @@ export default {
     },
 
     setFocus: function(row, colName, idx) {
-      if (this.flgDebug >= 2)
+      if (this.flgDebug >= 4)
         console.log(
           "setFocus: " + idx + ":" + colName + ":: " + this.xfocusRow
         );
       if (this.xfocusRow != idx) {
-        this.clearFocus(idx);
-        this.xfocusRow = idx;
+        this.clearFocus();
       }
-      const lbl = "flgFocus";
-      Vue.set(row, lbl, colName);
+      this.xfocusRow = idx;
+      this.focusRow = idx;
+      this.focusColumn = colName;
+      //ref="'data-element-' + idx + '-' + col.colName"
+      const myHasFocus = this.hasFocus(idx, colName);
     },
     sortBy: function(key) {
       this.sortKey = key;
@@ -340,7 +356,7 @@ export default {
     noteUpdate: function(row, col, idx) {
       if (this.flgDebug >= 3)
         console.log("updated: " + idx + ": " + col.colName);
-      Vue.set(this.updates, row["pk"], row);
+      Vue.set(this.updates, row[this.pk], row);
     }
   }
 };

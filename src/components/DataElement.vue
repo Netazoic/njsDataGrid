@@ -27,7 +27,7 @@
           >
       <option v-for="opt in col.options" :value="opt.value" :key="opt.value">{{opt.label}}</option>
     </select>
-    <span v-if="!flgEdit">{{displayVal}}</span>
+    <span @focus="onFocus" v-if="!flgEdit">{{displayVal}}</span>
 </span>
 </template>
 <script>
@@ -40,7 +40,9 @@ export default {
   props: ["row", "col", "rowIdx", "hasFocus"],
   components: { cDateTime },
   data: function() {
-    return {};
+    return {
+      flgDebug: 1
+    };
   },
   computed: {
     flgEdit() {
@@ -50,14 +52,9 @@ export default {
     },
     flgFocus() {
       const flg = this.hasFocus;
+      if (this.flgDebug >= 2) console.log(this.refName + " has focus: " + flg);
       if (flg) {
-        this.$nextTick(() => {
-          let el = this.$refs[this.refName];
-          if (el) {
-            if (el.$el) el = el.$el; //vue components
-            el.focus();
-          }
-        });
+        this.focusMe();
       }
       return flg;
     },
@@ -125,11 +122,22 @@ export default {
     }
   },
   methods: {
+    focusMe() {
+      // TODO kills the backtab function
+      this.$nextTick(() => {
+        let el = this.$refs[this.refName];
+        if (el) {
+          if (el.$el) el = el.$el; //vue components
+          el.focus();
+        }
+      });
+    },
     onBlur() {
       this.$emit("blur");
     },
     onFocus() {
       this.$emit("focus");
+      // console.log("onFocus: " + this.refName);
     }
   }
 };

@@ -8,6 +8,7 @@
         @change="$emit('change');"
         @input="$emit('change');"
         :tabindex="tabIndex"
+        class="data-element-input"
         />
     <input v-if="flgEdit && (inputType == 'text' || inputType == 'date')" 
             :type="inputType"
@@ -17,6 +18,7 @@
             @change="$emit('change');"
             :tabindex="tabIndex"
             :ref="refName"
+            class="data-element-input"
             />
  
     <select v-if="flgEdit && inputType == 'select'" 
@@ -24,8 +26,10 @@
           @change="$emit('change')"
           :tabIndex="tabIndex"
           :ref="refName"
+          class="data-element-input"
           >
-      <option v-for="opt in col.options" :value="opt.value" :key="opt.value">{{opt.label}}</option>
+      <option value=null>-- select --</option>
+      <option v-for="(opt,idx) in col.options" :value="opt.value" :key="idx">{{opt.label}}</option>
     </select>
     <span @focus="onFocus" v-if="!flgEdit">{{displayVal}}</span>
 </span>
@@ -43,6 +47,15 @@ export default {
     return {
       flgDebug: 1
     };
+  },
+  watch: {
+    col: function(newVal) {
+      if (col.options) {
+        for (opt in col.options) {
+          console.log(opt);
+        }
+      }
+    }
   },
   computed: {
     flgEdit() {
@@ -115,6 +128,16 @@ export default {
             dispVal = d.format("MM/DD/YYYY");
           }
           break;
+        case "select":
+          if (baseVal == null) dispVal = baseVal;
+          else {
+            const slctdOpt = this.col.options.find(function(el) {
+              return el.value == baseVal;
+            });
+            if (!slctdOpt) dispVal = "value not found";
+            else dispVal = slctdOpt.label;
+          }
+          break;
         default:
           dispVal = baseVal;
       }
@@ -142,3 +165,9 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+.data-element-input {
+  width: 90%;
+}
+</style>

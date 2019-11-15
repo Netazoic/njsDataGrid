@@ -1,18 +1,27 @@
 <template>
 <div>
-  <form v-if="flgLocalControls">
+    <div id="asyncticator-mount"/>
+   <form v-if="flgLocalControls">
       <button @click.prevent.stop="saveGrid">Save</button> 
       <button @click.prevent.stop="addRow">Add Row</button>
       <button @click.prevent.stop="deleteRows">Delete</button>
       <button @click.prevent.stop="resetGrid">Reset</button>
+      <button @click.prevent.stop="toggleExcelMenu"><i class="fas fa-file-excel" ></i></button>
+      <div id="menu-excel" :class="{hidden:!flgExcelMenu, visible:flgExcelMenu}" class="modal">
+        <div class="modal-content">
+        <span class="close" @click="toggleExcelMenu">&times;</span>
+        <button @click.prevent.stop="exportExcelData" title="export grid data as excel file"><i class="fas fa-file-export" title="Export columns that are visible in the grid"></i></button>
+        </div>
+      </div>
       Search <input name="query" v-model="filterKey"/>
       Rows:
-      <select v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="10000000">All</option></select>
+      <select v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="ALL">All</option></select>
+      1-{{ upperDispIdx }} of {{ numAllRows }}
   </form>
-  <table>
+  <table id='njs-grid'>
     <thead>
       <tr>
-        <th style="width:2px;min-width:2px !important;">row</th>
+        <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;">row</th>
         <th v-for="col in columns" 
           :key="col.colName"
           @click="sortBy(col.colName)"
@@ -28,9 +37,9 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(row,idx) in filteredData" :key="row[pk]" 
+      <tr v-for="(row,idx) in dispData" :key="row[pk]" 
           class="table-data" 
-          :class="{'selected': selectedRows[idx], 'grid-lines':flgGridLines}"
+          :class="{'selected': selectedRows[idx]==true, 'grid-lines':flgGridLines}"
           :ref="'tr-data-' + idx">
         <td @click.exact="toggleSelectRow(idx)" 
             @click.ctrl.exact="toggleSelectRow(idx,true)"
@@ -60,6 +69,7 @@
   <div v-if="flgDebug"><input type="checkbox" v-model="flgShowData"/>Show Data  
       <span v-if="flgShowData"> 
         <input type="radio" v-model="debugData" value="showData"/>data 
+        <input type="radio" v-model="debugData" value="showFilteredData">Filterd
         <input type="radio" v-model="debugData" value="showUpdates"/> updates
         <input type="radio" v-model="debugData" value="showNewrecs"/> new recs
         <input type="radio" v-model="debugData" value="showDeletes"/> deletes
@@ -71,6 +81,7 @@
 
       <transition name="fade2">
       <pre v-if="debugData == 'showData'">{{data}}</pre>
+      <pre v-if="debugData == 'showFilteredData'">{{filteredData}}</pre>
       </transition>
       <transition name="fade2">
       <pre v-if="debugData == 'showUpdates'">{{updates}}</pre>
@@ -80,13 +91,16 @@
       </transition>
     </div>
   </transition>
+
 </div>
 </template>
 <script>
-import Vue from "vue";
 import DataElement from "./components/DataElement.vue";
 import as from "./lib/libAsync";
+import axios from "axios";
 import { stringify } from "querystring";
+import uuid from "uuid/v1";
+import Vue from "vue";
 
 export default {
   name: "njsGrid",
@@ -95,16 +109,19 @@ export default {
     colDefs: Array,
     dataURL: String,
     dataDef: Array,
-    pDispRows: Number
+    pDispRows: Number,
+    defaultRec: Object,
+    urlSaveGrid: String
   },
-  components: { DataElement },
+  components: {
+    DataElement
+  },
   data: function() {
     var sortOrders = {};
     this.colDefs.forEach(function(col) {
       sortOrders[col.colName] = 1;
     });
     return {
-      columns: this.colDefs,
       data: [],
       updates: {},
       deletes: {},
@@ -112,13 +129,14 @@ export default {
       i_gridData: [],
       selectedRows: {},
       sortKey: "",
-      numDispRows: this.pDispRows || 50,
+      numDispRows: this.pDispRows || 10,
       xfocusRow: 0,
       flgDebug: 1,
       flgLocalControls: true,
       flgShowData: false,
       flgDirty: false,
       flgGridLines: true,
+      flgExcelMenu: false,
       filterKey: this.filterKey,
       sortOrders: sortOrders,
       debugData: "showData",
@@ -128,10 +146,13 @@ export default {
     };
   },
   created() {
+    as.setupAxiosIndicators(this.$http);
     this.initGrid();
   },
   watch: {
-    columns() {},
+    columns() {
+      console.log("columns updated");
+    },
     pFilter(newVal) {
       this.filterKey = newVal;
     },
@@ -139,7 +160,10 @@ export default {
       // console.log("data: " + newVal);
     },
     dataURL(newVal) {
-      this.getGridData(newVal);
+      this.initGrid();
+    },
+    updates(newVal) {
+      //console.log(newVal);
     },
     sortOrders() {
       // console.log("sortOrders:");
@@ -147,8 +171,14 @@ export default {
     }
   },
   computed: {
+    columns() {
+      return this.colDefs.filter(function(col, idx) {
+        return col.hidden !== true;
+      });
+    },
     filteredData: function() {
       var sortKey = this.sortKey;
+      var keyLookup = null;
       var filterKey = this.filterKey && this.filterKey.toLowerCase();
       var flgDirty = this.flgDirty;
       var order = this.sortOrders[sortKey] || 1;
@@ -165,20 +195,68 @@ export default {
         });
       }
       if (sortKey) {
-        heroes = heroes.slice().sort(function(a, b) {
-          a = a[sortKey];
-          b = b[sortKey];
-          return (a === b ? 0 : a > b ? 1 : -1) * order;
+        // heroes = heroes.slice().sort(function(a, b) {
+        //   a = a[sortKey];
+        //   b = b[sortKey];
+        //   return (a === b ? 0 : a > b ? 1 : -1) * order;
+        // });
+        const col = this.colDefs.find(function(el) {
+          return el.colName == sortKey;
         });
+        if (col.type === "select") {
+          //ruh roh
+          keyLookup = col.options;
+        }
+        heroes = heroes
+          .slice()
+          .sort(this.compareValues(sortKey, order, keyLookup));
       }
       //this.flgDirty = false;
-      heroes = heroes.slice(0, this.numDispRows);
       return heroes;
     },
+
+    dispData() {
+      if (this.numDispRows == "ALL") return this.filteredData;
+      else return this.filteredData.slice(0, this.numDispRows);
+    },
+
+    debounce(func, wait, immediate) {
+      var timeout;
+      return function() {
+        debugger;
+        var context = this,
+          args = arguments;
+        var later = function() {
+          timeout = null;
+          if (!immediate) func.apply(context, args);
+        };
+        var callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+      };
+    },
     pk() {
-      return this.colDefs.filter(function(el) {
+      const col = this.colDefs.find(function(el) {
         return el.pk;
       });
+      return col.colName;
+    },
+    numAllRows() {
+      const numAll = Object.keys(this.filteredData).length;
+      return numAll;
+    },
+    upperDispIdx() {
+      let upper;
+      if (this.numDispRows === "ALL") {
+        // if (isNaN(this.numDispRows)) {
+        upper = this.numAllRows;
+      } else {
+        if (this.numAllRows < this.numDispRows) {
+          upper = this.numAllRows;
+        } else upper = this.numDispRows;
+      }
+      return upper;
     }
   },
   filters: {
@@ -189,12 +267,13 @@ export default {
   methods: {
     addRow: function() {
       this.clearSelected();
-      // Get the first record and clone it
-      var rec = this.data[0];
-      rec = Object.assign({}, rec);
-      for (var k in rec) {
-        rec[k] = null;
-      }
+      let rec = Object.assign({}, this.defaultRec);
+      // Set the pk to a uuid
+      const colDefs = this.colDefs;
+      const pkCol = colDefs.find(function(col) {
+        return col.pk === true;
+      });
+      rec[pkCol.colName] = uuid();
       // insert at top of stack
       this.data.unshift(rec);
       this.noteAdd(rec);
@@ -203,10 +282,21 @@ export default {
       //const refName = 100 + "_" + this.colDefs[0].colName;
       //const refName = "tr-data-0";
       // TODO  select first input not working
-      const refName = "data-element-0-" + this.columns[0].colName;
-      var el = this.$refs[refName][0];
-      if (el.$el) el = el.$el; //vue components
-      el.focus();
+      // find first visible column
+      let col = this.columns.find(col => {
+        return col.hidden !== true;
+      });
+      //TODO figure out how to focus on new row
+      // const refName = "data-element-0-" + col.colName;
+      // var ref = this.$refs[refName];
+      // if (ref) {
+      //   var el = ref[0] ? ref[0] : ref;
+      //   if (!el) {
+      //     debugger;
+      //   }
+      //   if (el.$el) el = el.$el; //vue components
+      //   el.focus();
+      // }
     },
 
     clearFocus: function(idx) {
@@ -217,6 +307,38 @@ export default {
     clearSelected: function() {
       this.selectedRows = {};
     },
+    // function for dynamic sorting
+    compareValues(key, order = 1, keyLookup) {
+      return function(a, b) {
+        if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
+          // property doesn't exist on either object
+          return 0;
+        }
+
+        let varA = typeof a[key] === "string" ? a[key].toUpperCase() : a[key];
+        let varB = typeof b[key] === "string" ? b[key].toUpperCase() : b[key];
+        if (varA == null) varA = "ZZZZZZZZZ";
+        if (varB == null) varB = "ZZZZZZZZZ";
+        if (keyLookup) {
+          //Look up display values in an options list
+          if (varA == "" || varB == "") {
+            //Don't work so hard
+          } else {
+            const optA = keyLookup.find(function(opt) {
+              return opt.value == varA;
+            });
+            const optB = keyLookup.find(function(opt) {
+              return opt.value == varB;
+            });
+            varA = optA ? optA.label : varA;
+            varB = optB ? optB.label : varB;
+          }
+        }
+
+        const comparison = varA === varB ? 0 : varA > varB ? 1 : -1;
+        return comparison * order;
+      };
+    },
     deleteRows() {
       const slctdCount = Object.keys(this.selectedRows).length;
       if (slctdCount == 0) return;
@@ -225,6 +347,7 @@ export default {
       if (!flg) return;
       var rec;
       const vm = this;
+      const pka = this.pk;
       var currentDeletes = {};
       // Load up the this.deletes collection before we start deleting things
       for (var idx in this.selectedRows) {
@@ -232,15 +355,15 @@ export default {
         rec = this.filteredData[idx];
         if (!rec) continue; // Deleted row ??
         rec = Object.assign({}, rec); // Make a clone
-        if (rec.pk) Vue.set(this.deletes, rec.pk, rec);
+        if (rec[pka]) Vue.set(this.deletes, rec[pka], rec);
         //Vue.set(vm.data, dataIdx, null);
-        currentDeletes[rec.pk] = rec.pk;
+        currentDeletes[rec[pka]] = rec[pka];
       }
       // Delete the original rec out of this.data
       // This will reactively remove the record from this.filteredData;
       for (var pk in currentDeletes) {
         const dataIdx = vm.data.findIndex(function(dataRec, idx) {
-          return dataRec.pk == pk;
+          return dataRec[pka] == pk;
         });
         vm.data.splice(dataIdx, 1);
       }
@@ -252,6 +375,46 @@ export default {
       });
       let difference = this.data.filter(x => !this.i_gridData.includes(x));
       return difference;
+    },
+    exportExcelData() {
+      var colsExport = [];
+      for (var colIdx in this.colDefs) {
+        col = this.colDefs[colIdx];
+        if (col.hidden) continue;
+        colsExport.push(col);
+      }
+      var tab_text = "<table border='2px'><tr bgcolor='#87AFC6'>\n";
+      var textRange;
+      var j = 0;
+      var tab = document.getElementById("njs-grid"); // id of table
+      var sa;
+      var row, col, fldVal;
+      tab_text += "<tr>";
+      for (var colIdx in colsExport) {
+        col = colsExport[colIdx];
+        tab_text += "<th>" + col.colHdr + "</th>";
+      }
+      tab_text += "</tr>";
+      for (j = 0; j < this.filteredData.length; j++) {
+        row = this.filteredData[j];
+        tab_text += "<tr>";
+        for (var colIdx in colsExport) {
+          col = colsExport[colIdx];
+          fldVal = row[col.colName];
+          if (fldVal === null) fldVal = "";
+          tab_text += "<td>" + fldVal + "</td>";
+        }
+        tab_text += "</tr>\n";
+      }
+      tab_text = tab_text + "</table>";
+      tab_text = tab_text.replace(/<A[^>]*>|<\/A>/g, ""); //remove if u want links in your table
+      tab_text = tab_text.replace(/<img[^>]*>/gi, ""); // remove if u want images in your table
+      tab_text = tab_text.replace(/<input[^>]*>|<\/input>/gi, ""); // reomves input params
+
+      sa = window.open(
+        "data:application/vnd.ms-excel," + encodeURIComponent(tab_text)
+      );
+      return sa;
     },
 
     getGridData(gridDataURL, dataDef) {
@@ -277,6 +440,9 @@ export default {
     },
     initGrid() {
       // this.setGridColumns(this.colDefs);
+      this.deletes = {};
+      this.updates = {};
+      this.newrecs = {};
       this.getGridData(this.dataURL, this.dataDef);
     },
     resetGrid() {
@@ -285,26 +451,31 @@ export default {
       this.updates = {};
       this.newrecs = {};
       this.selectedRows = {};
+      this.sortKey = "";
+      this.sortOrders = {};
       this.data = this.i_gridData.slice(0);
     },
     saveGrid() {
-      var url = "/ds?pAction=poolstartSaveGrid";
+      var url = this.urlSaveGrid;
       //const diff = this.diffData();
-      var fd = new FormData();
       var dataGrid = {};
-      dataGrid.data = this.data;
+      //dataGrid.data = this.data;
       dataGrid.updates = this.updates;
       dataGrid.deletes = this.deletes;
       dataGrid.newrecs = this.newrecs;
-
-      fd.append("dataGrid", JSON.stringify(dataGrid));
-      var fLoad = function(ret) {
-        alert("Grid data saved");
-      };
-      var fErr = null;
-      as.xhrSubmit(fd, url, fLoad, fErr).catch(function(err) {
-        alert(err);
-      });
+      if (!url) {
+        this.$emit("saveGrid", dataGrid);
+      } else {
+        var fd = new FormData();
+        fd.append("dataGrid", JSON.stringify(dataGrid));
+        var fLoad = function(ret) {
+          alert("Grid updates saved");
+        };
+        var fErr = null;
+        as.xhrSubmit(fd, url, fLoad, fErr).catch(function(err) {
+          alert(err);
+        });
+      }
     },
 
     setFocus: function(row, colName, idx) {
@@ -321,6 +492,7 @@ export default {
       //ref="'data-element-' + idx + '-' + col.colName"
       const myHasFocus = this.hasFocus(idx, colName);
     },
+
     sortBy: function(key) {
       this.sortKey = key;
       var sortKey = key;
@@ -331,6 +503,22 @@ export default {
       //Vue.set(this.sortOrders, key, newVal);
       if (this.flgDebug > 3) {
         console.log(this.sortOrders);
+      }
+    },
+    toggleExcelMenu() {
+      this.flgExcelMenu = !this.flgExcelMenu;
+    },
+
+    toggleSelectAll() {
+      if (Object.keys(this.selectedRows).length) {
+        this.selectedRows = {};
+        return false;
+      } else {
+        const vm = this;
+        this.filteredData.forEach(function(el, idx) {
+          Vue.set(vm.selectedRows, idx, true);
+        });
+        return true;
       }
     },
     toggleSelectRow(idx, flgCtrl, flgShift) {
@@ -345,6 +533,11 @@ export default {
         for (var idxS = lastIdx; idxS <= idx; idxS++) {
           Vue.set(this.selectedRows, idxS, newVal);
         }
+      } else if (flgCtrl) {
+        // Toggle this row in the selected set
+        // TODO not working?
+        // debugger;
+        Vue.set(this.selectedRows, idx, newVal);
       } else {
         Vue.set(this.selectedRows, idx, newVal);
       }
@@ -354,9 +547,12 @@ export default {
       this.idxAdd++;
     },
     noteUpdate: function(row, col, idx) {
-      if (this.flgDebug >= 3)
+      if (this.flgDebug >= 3) {
         console.log("updated: " + idx + ": " + col.colName);
-      Vue.set(this.updates, row[this.pk], row);
+      }
+      //this.updates.push(row);   // If we are using an array
+      const pk = row[this.pk];
+      Vue.set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
     }
   }
 };
@@ -435,5 +631,50 @@ tr.selected td {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 4px solid #fff;
+}
+
+/*Modal menu*/
+/* The Modal (background) */
+.modal {
+  display: block; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0, 0, 0); /* Fallback color */
+  background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+}
+
+/* Modal Content/Box */
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto; /* 15% from the top and centered */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 100px; /* Could be more or less, depending on screen size */
+}
+
+/* The Close Button */
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hidden {
+  display: none;
+}
+.visible {
+  display: block;
 }
 </style>

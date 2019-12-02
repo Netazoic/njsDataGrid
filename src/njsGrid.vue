@@ -6,11 +6,15 @@
       <button @click.prevent.stop="addRow">Add Row</button>
       <button @click.prevent.stop="deleteRows">Delete</button>
       <button @click.prevent.stop="resetGrid">Reset</button>
-      <button @click.prevent.stop="toggleExcelMenu"><i class="fas fa-file-excel" ></i></button>
+      <button @click.prevent.stop="toggleExcelMenu" title="Export grid data" :disabled="!data.length">
+          <i class="fa fas fa-file-excel" 
+          :class="{disabled:!data.length}"
+          title="export grid data as excel file">&nbsp;Export</i></button>
       <div id="menu-excel" :class="{hidden:!flgExcelMenu, visible:flgExcelMenu}" class="modal">
         <div class="modal-content">
         <span class="close" @click="toggleExcelMenu">&times;</span>
-        <button @click.prevent.stop="exportExcelData" title="export grid data as excel file"><i class="fas fa-file-export" title="Export columns that are visible in the grid"></i></button>
+        <button @click.prevent.stop="exportExcelData(false,$event)" ><i class="fas fa-file-export" title="Export columns that are visible in the grid"></i>&nbsp; Filtered</button>
+        <button @click.prevent.stop="exportExcelData(true,$event)" title="export grid data as excel file"><i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL</button>
         </div>
       </div>
       Search <input name="query" v-model="filterKey"/>
@@ -376,7 +380,12 @@ export default {
       let difference = this.data.filter(x => !this.i_gridData.includes(x));
       return difference;
     },
-    exportExcelData() {
+    exportExcelData(flgAll) {
+      const exportData = flgAll ? this.data : this.filteredData;
+      if (!exportData || !exportData.length) {
+        this.toggleExcelMenu();
+        return;
+      }
       var colsExport = [];
       for (var colIdx in this.colDefs) {
         col = this.colDefs[colIdx];
@@ -395,8 +404,8 @@ export default {
         tab_text += "<th>" + col.colHdr + "</th>";
       }
       tab_text += "</tr>";
-      for (j = 0; j < this.filteredData.length; j++) {
-        row = this.filteredData[j];
+      for (j = 0; j < exportData.length; j++) {
+        row = exportData[j];
         tab_text += "<tr>";
         for (var colIdx in colsExport) {
           col = colsExport[colIdx];
@@ -410,10 +419,10 @@ export default {
       tab_text = tab_text.replace(/<A[^>]*>|<\/A>/g, ""); //remove if u want links in your table
       tab_text = tab_text.replace(/<img[^>]*>/gi, ""); // remove if u want images in your table
       tab_text = tab_text.replace(/<input[^>]*>|<\/input>/gi, ""); // reomves input params
-
       sa = window.open(
         "data:application/vnd.ms-excel," + encodeURIComponent(tab_text)
       );
+      this.toggleExcelMenu();
       return sa;
     },
 
@@ -670,6 +679,16 @@ tr.selected td {
   color: black;
   text-decoration: none;
   cursor: pointer;
+}
+.fa.disabled,
+.fa[disabled],
+.disabled > .fa,
+[disabled] > .fa {
+  opacity: 0.5;
+  /*optional*/
+  cursor: not-allowed;
+  /*optional*/
+  pointer-events: none;
 }
 .hidden {
   display: none;

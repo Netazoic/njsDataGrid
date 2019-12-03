@@ -4,6 +4,12 @@ const optsPoolCode = [{ value: 'TEST_POOL_A', label: 'TEST_POOL_A' },
 
 export const colDefs = [
     {
+        colIdx: 0,
+        colName: "pk",
+        visible: false,
+        pk: true
+    },
+    {
         colName: "poolcode",
         colHdr: "Pool Code",
         colIdx: 1,

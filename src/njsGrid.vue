@@ -105,6 +105,7 @@ import axios from "axios";
 import { stringify } from "querystring";
 import uuid from "uuid/v1";
 import Vue from "vue";
+import moment from "moment";
 
 export default {
   name: "njsGrid",
@@ -114,7 +115,7 @@ export default {
     dataURL: String,
     dataDef: Array,
     pDispRows: Number,
-    defaultRec: Object,
+    pDefaultRec: Object,
     urlSaveGrid: String
   },
   components: {
@@ -130,6 +131,7 @@ export default {
       updates: {},
       deletes: {},
       newrecs: {},
+      defaultRec: this.pDefaultRec || {},
       i_gridData: [],
       selectedRows: {},
       sortKey: "",
@@ -152,9 +154,10 @@ export default {
   created() {
     as.setupAxiosIndicators(this.$http);
     this.initGrid();
+    this.initDefaultRec();
   },
   watch: {
-    columns() {
+    columns(newVal) {
       console.log("columns updated");
     },
     pFilter(newVal) {
@@ -176,9 +179,10 @@ export default {
   },
   computed: {
     columns() {
-      return this.colDefs.filter(function(col, idx) {
-        return col.hidden !== true;
+      const cols = this.colDefs.filter(function(col, idx) {
+        return col.hidden !== true && col.visible !== false;
       });
+      return cols;
     },
     filteredData: function() {
       var sortKey = this.sortKey;
@@ -244,7 +248,8 @@ export default {
       const col = this.colDefs.find(function(el) {
         return el.pk;
       });
-      return col.colName;
+      if (col) return col.colName;
+      else return null;
     },
     numAllRows() {
       const numAll = Object.keys(this.filteredData).length;
@@ -277,7 +282,9 @@ export default {
       const pkCol = colDefs.find(function(col) {
         return col.pk === true;
       });
-      rec[pkCol.colName] = uuid();
+      if (pkCol) {
+        rec[pkCol.colName] = uuid();
+      }
       // insert at top of stack
       this.data.unshift(rec);
       this.noteAdd(rec);
@@ -453,6 +460,24 @@ export default {
       this.updates = {};
       this.newrecs = {};
       this.getGridData(this.dataURL, this.dataDef);
+    },
+    initDefaultRec() {
+      if (Object.keys(this.defaultRec).size) return; //Already set
+      let col;
+      for (let idx in this.colDefs) {
+        col = this.colDefs[idx];
+        let defaultVal;
+        if (col.default) defaultVal = col.default;
+        else if (col.type == "date") {
+          var d = new Date(new Date().setHours(0, 0, 0.0));
+          defaultVal = new moment.utc(d).format("YYYY-MM-DD");
+        } else if (col.type == "timestamp") {
+          let d = new Date(new Date().setHours(0, 0, 0, 0));
+          defaultVal = new moment.utc(d).format("YYYY-MM-DDThh:mm:ss.SSS");
+        }
+        //  else if (col.type == "timestamp") defaultVal = moment.utc().valueOf();
+        this.defaultRec[col.colName] = defaultVal;
+      }
     },
     resetGrid() {
       // Reset to original condition on page load

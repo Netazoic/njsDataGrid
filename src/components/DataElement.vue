@@ -115,16 +115,15 @@ export default {
           if (baseVal == null) {
             dispVal = null;
           } else {
-            var d = new Date(baseVal);
-            dispVal = new moment.utc(d).format("MMM D, YYYY, h:mm A");
+            var d = new moment.utc(baseVal, "YYYY-MM-DDThh:mm");
+            dispVal = d.format("MMM D, YYYY, h:mm A");
           }
           break;
         case "date":
-          //var d = new Date(baseVal);
           if (baseVal == null) {
             dispVal = null;
           } else {
-            var d = new moment.utc(baseVal);
+            var d = new moment.utc(baseVal, "YYYY-MM-DDThh:mm");
             dispVal = d.format("MM/DD/YYYY");
           }
           break;

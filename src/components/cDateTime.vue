@@ -8,10 +8,12 @@ export default {
   name: "cDateTime",
   props: ["value"], // value is set by the parent v-model
   data() {
-    var d = new Date(this.value);
-    var parseVal = new moment.utc(d).format("YYYY-MM-DDThh:mm");
+    // Following no longer necessary
+    // var mmUTC = new moment.utc(this.value, "YYYY-MM-DDThh:mm").format(
+    //   "YYYY-MM-DDThh:mm"
+    // );
     return {
-      parseVal: parseVal,
+      parseVal: this.value,
       flgDebug: false
     };
   },

@@ -18,10 +18,19 @@
         </div>
       </div>
       Search <input name="query" v-model="filterKey"/>
-      Rows:
-      <select v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="ALL">All</option></select>
-      1-{{ upperDispIdx }} of {{ numAllRows }}
+
   </form>
+  <div>
+      <select v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option></select>
+      <span class="disp-row-offset-adjustor">
+         <i class="fa fa-caret-left" :class="{disabled: recOffset==0}" @click.stop.prevent="adjustRecordOffset(-1)" ></i>
+         <i class="fa fa-caret-right" :class="{disabled: upperDispIdx >= numAllRows}" @click.stop.prevent="adjustRecordOffset(1)"></i>
+      </span>
+      <span class="disp-row-count-selector">
+        {{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRows }}
+      </span>
+
+  </div>
   <table id='njs-grid'>
     <thead>
       <tr>
@@ -49,7 +58,7 @@
             @click.ctrl.exact="toggleSelectRow(idx,true)"
             @click.shift.exact="toggleSelectRow(idx,false,true)"
             style="width:2px;min-width:2px;"
-          :tabindex="((idx+1)*100)">{{idx + 1}}</td>
+          :tabindex="((idx+1)*100)">{{idx + recOffset + 1}}</td>
         <td v-for="col in columns" :key="col.colName"
           :tabindex=" ((idx+1) *100) + col.colIdx" 
           @focus="setFocus(row,col.colName, idx)"
@@ -144,6 +153,7 @@ export default {
       flgGridLines: true,
       flgExcelMenu: false,
       filterKey: this.filterKey,
+      recOffset: 0,
       sortOrders: sortOrders,
       debugData: "showData",
       idxAdd: 0,
@@ -157,24 +167,15 @@ export default {
     this.initDefaultRec();
   },
   watch: {
-    columns(newVal) {
-      console.log("columns updated");
-    },
     pFilter(newVal) {
       this.filterKey = newVal;
     },
-    data(newVal) {
-      // console.log("data: " + newVal);
+    filterKey(newVal) {
+      this.recOffset = 0;
+      return newVal;
     },
     dataURL(newVal) {
       this.initGrid();
-    },
-    updates(newVal) {
-      //console.log(newVal);
-    },
-    sortOrders() {
-      // console.log("sortOrders:");
-      // console.log(this.sortOrders);
     }
   },
   computed: {
@@ -224,8 +225,22 @@ export default {
     },
 
     dispData() {
-      if (this.numDispRows == "ALL") return this.filteredData;
-      else return this.filteredData.slice(0, this.numDispRows);
+      let dispRecs, upperSliceIdx;
+      if (!this.filteredData || !this.filteredData.length) {
+        return [];
+      }
+      if (this.numDispRows == -1) {
+        //Display all
+        this.resetRecordOffset(0);
+        dispRecs = this.filteredData;
+      } else {
+        upperSliceIdx = this.recOffset + new Number(this.numDispRows);
+        dispRecs = this.filteredData.slice(this.recOffset, upperSliceIdx);
+      }
+      // console.log("dispData:numDispRows: " + this.numDispRows);
+      // console.log("dispRecs length: " + dispRecs.length);
+      // console.log("upperSliceIdx: " + upperSliceIdx);
+      return dispRecs;
     },
 
     debounce(func, wait, immediate) {
@@ -255,16 +270,18 @@ export default {
       const numAll = Object.keys(this.filteredData).length;
       return numAll;
     },
+    lowerDispIdx() {
+      return this.recOffset + 1;
+    },
     upperDispIdx() {
       let upper;
-      if (this.numDispRows === "ALL") {
+      if (this.numDispRows == -1) {
         // if (isNaN(this.numDispRows)) {
         upper = this.numAllRows;
       } else {
-        if (this.numAllRows < this.numDispRows) {
-          upper = this.numAllRows;
-        } else upper = this.numDispRows;
+        upper = this.recOffset - 0 + (this.numDispRows - 0);
       }
+      if (upper > this.numAllRows) upper = this.numAllRows;
       return upper;
     }
   },
@@ -526,7 +543,15 @@ export default {
       //ref="'data-element-' + idx + '-' + col.colName"
       const myHasFocus = this.hasFocus(idx, colName);
     },
-
+    resetRecordOffset(idx) {
+      this.recOffset = idx;
+    },
+    adjustRecordOffset: function(direction) {
+      // direction is 1 or -1
+      let offset = this.recOffset + this.numDispRows * direction;
+      offset = offset < 0 ? 0 : offset;
+      this.recOffset = offset;
+    },
     sortBy: function(key) {
       this.sortKey = key;
       var sortKey = key;
@@ -704,6 +729,16 @@ tr.selected td {
   color: black;
   text-decoration: none;
   cursor: pointer;
+}
+.disp-row-count-selector {
+  min-width: 500px;
+}
+.disp-row-offset-adjustor {
+  font-size: 24px;
+  margin-left: 2px;
+}
+.disp-row-offset-adjustor > i {
+  margin: 10px;
 }
 .fa.disabled,
 .fa[disabled],

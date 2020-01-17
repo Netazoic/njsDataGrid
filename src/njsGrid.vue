@@ -17,7 +17,7 @@
         <button @click.prevent.stop="exportExcelData(true,$event)" title="export grid data as excel file"><i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL</button>
         </div>
       </div>
-      Search <input name="query" v-model="filterKey"/>
+      Search <input name="query" v-model="filterKey_DB"/>
 
   </form>
   <div>
@@ -115,6 +115,7 @@ import { stringify } from "querystring";
 import uuid from "uuid/v1";
 import Vue from "vue";
 import moment from "moment";
+import util from "./lib/util";
 
 export default {
   name: "njsGrid",
@@ -179,6 +180,15 @@ export default {
     }
   },
   computed: {
+    filterKey_DB: {
+      //De-bounced filterKey
+      get() {
+        return this.filterKey;
+      },
+      set: util.debounce(function(newVal) {
+        this.filterKey = newVal;
+      }, 250)
+    },
     columns() {
       const cols = this.colDefs.filter(function(col, idx) {
         return col.hidden !== true && col.visible !== false;
@@ -216,6 +226,8 @@ export default {
           //ruh roh
           keyLookup = col.options;
         }
+        // DEBUG
+        keyLookup = null; // Testing performance difference
         heroes = heroes
           .slice()
           .sort(this.compareValues(sortKey, order, keyLookup));

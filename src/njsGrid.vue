@@ -17,11 +17,10 @@
         <button @click.prevent.stop="exportExcelData(true,$event)" title="export grid data as excel file"><i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL</button>
         </div>
       </div>
-      Search <input name="query" v-model="filterKey_DB"/>
-
-  </form>
+    </form>
   <div>
-      <select v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option></select>
+      Search <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp"/>
+      <select class="num-rows-select" v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option></select>
       <span class="disp-row-offset-adjustor">
          <i class="fa fa-caret-left" :class="{disabled: recOffset==0}" @click.stop.prevent="adjustRecordOffset(-1)" ></i>
          <i class="fa fa-caret-right" :class="{disabled: upperDispIdx >= numAllRows}" @click.stop.prevent="adjustRecordOffset(1)"></i>
@@ -213,6 +212,19 @@ export default {
           });
         });
       }
+      // Add in any 'new' records, clearing any already in the heroes collection
+      // so we don't get a pk violation.  This keeps new records at the top of the editor.
+      const vm = this;
+      Object.keys(this.newrecs).forEach(function(recIdx, idx) {
+        const newRec = vm.newrecs[recIdx];
+        const foundRec = heroes.find(function(rec, idx) {
+          if (rec.pk === newRec.pk) {
+            heroes.splice(idx, 1); // Clear the rec from heroes
+            return true;
+          }
+        });
+        heroes.unshift(newRec);
+      });
       if (sortKey) {
         // heroes = heroes.slice().sort(function(a, b) {
         //   a = a[sortKey];
@@ -303,6 +315,10 @@ export default {
     }
   },
   methods: {
+    nullOp: function(evt) {
+      console.log(evt);
+      //nada
+    },
     addRow: function() {
       this.clearSelected();
       let rec = Object.assign({}, this.defaultRec);
@@ -406,6 +422,13 @@ export default {
           return dataRec[pka] == pk;
         });
         vm.data.splice(dataIdx, 1);
+        // Also remove from the newrecs collection
+        Object.keys(this.newrecs).forEach(function(recIdx, idx) {
+          const newRec = vm.newrecs[recIdx];
+          if (newRec.pk == pk) {
+            delete vm.newrecs[recIdx];
+          }
+        });
       }
     },
     diffData() {
@@ -535,9 +558,17 @@ export default {
           alert("Grid updates saved");
         };
         var fErr = null;
-        as.xhrSubmit(fd, url, fLoad, fErr).catch(function(err) {
-          alert(err);
-        });
+        const vm = this;
+        as.xhrSubmit(fd, url, fLoad, fErr)
+          .then(function(data) {
+            // Clear the collections on a successful save
+            vm.deletes = {};
+            vm.updates = {};
+            vm.newrecs = {};
+          })
+          .catch(function(err) {
+            alert(err);
+          });
       }
     },
 
@@ -767,5 +798,8 @@ tr.selected td {
 }
 .visible {
   display: block;
+}
+.num-rows-select {
+  margin-left: 5px;
 }
 </style>

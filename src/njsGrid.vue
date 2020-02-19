@@ -1,48 +1,52 @@
 <template>
 <div>
     <div id="asyncticator-mount"/>
-   <form v-if="flgLocalControls">
-      <button @click.prevent.stop="saveGrid">Save</button> 
-      <button @click.prevent.stop="addRow">Add Row</button>
-      <button @click.prevent.stop="deleteRows">Delete</button>
-      <button @click.prevent.stop="resetGrid">Reset</button>
-      <button @click.prevent.stop="toggleExcelMenu" title="Export grid data" :disabled="!data.length">
-          <i class="fa fas fa-file-excel" 
-          :class="{disabled:!data.length}"
-          title="export grid data as excel file">&nbsp;Export</i></button>
-      <div id="menu-excel" :class="{hidden:!flgExcelMenu, visible:flgExcelMenu}" class="modal">
-        <div class="modal-content">
-        <span class="close" @click="toggleExcelMenu">&times;</span>
-        <button @click.prevent.stop="exportExcelData(false,$event)" ><i class="fas fa-file-export" title="Export columns that are visible in the grid"></i>&nbsp; Filtered</button>
-        <button @click.prevent.stop="exportExcelData(true,$event)" title="export grid data as excel file"><i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL</button>
-        </div>
+    <div id="div-controls-container">
+      <div id="div-local-controls">
+        <form v-if="flgLocalControls">
+            <button @click.prevent.stop="saveGrid">Save</button> 
+            <button @click.prevent.stop="addRow">Add Row</button>
+            <button @click.prevent.stop="deleteRows">Delete</button>
+            <button @click.prevent.stop="resetGrid">Reset</button>
+            <button @click.prevent.stop="toggleExcelMenu" title="Export grid data" :disabled="!data.length">
+                <i class="fa fas fa-file-excel" 
+                :class="{disabled:!data.length}"
+                title="export grid data as excel file">&nbsp;Export</i></button>
+            <div id="menu-excel" :class="{hidden:!flgExcelMenu, visible:flgExcelMenu}" class="modal">
+              <div class="modal-content">
+              <span class="close" @click="toggleExcelMenu">&times;</span>
+              <button @click.prevent.stop="exportExcelData(false,$event)" ><i class="fas fa-file-export" title="Export columns that are visible in the grid"></i>&nbsp; Filtered</button>
+              <button @click.prevent.stop="exportExcelData(true,$event)" title="export grid data as excel file"><i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL</button>
+              </div>
+            </div>
+          </form>
       </div>
-    </form>
-  <div>
-      Search <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp"/>
-      <select class="num-rows-select" v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option></select>
-      <span class="disp-row-offset-adjustor">
-         <i class="fa fa-caret-left" :class="{disabled: recOffset==0}" @click.stop.prevent="adjustRecordOffset(-1)" ></i>
-         <i class="fa fa-caret-right" :class="{disabled: upperDispIdx >= numAllRows}" @click.stop.prevent="adjustRecordOffset(1)"></i>
-      </span>
-      <span class="disp-row-count-selector">
-        {{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRows }}
-      </span>
-
+      <div id="div-filter-controls">
+          Search <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp"/>
+          <select class="num-rows-select" v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option></select>
+          <span class="disp-row-offset-adjustor">
+            <i class="fa fa-caret-left" :class="{disabled: recOffset==0}" @click.stop.prevent="adjustRecordOffset(-1)" ></i>
+            <i class="fa fa-caret-right" :class="{disabled: upperDispIdx >= numAllRows}" @click.stop.prevent="adjustRecordOffset(1)"></i>
+          </span>
+          <span class="disp-row-count-selector">
+            {{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRows }}
+          </span>
+      </div>
   </div>
   <table id='njs-grid'>
     <thead>
       <tr>
-        <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;">row</th>
+        <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;" >row</th>
         <th v-for="col in columns" 
           :key="col.colName"
           @click="sortBy(col.colName)"
-          :class="{ active: sortKey == col.colName }"
-
-          :style="{width: col.colWidth + 'px'}"
+          @mouseout="hideHelp"
+          :class="headerClasses(col.colName,col.headerClasses)"
+          :style="{width: col.colWidth, 'min-width': col.colWidth }"
           >
 
           {{ col.colHdr | capitalize }}
+          <i v-if="col.help" class="fa fa-info-circle" @click.stop="showHelp(col.help,$event)"/>
           <span class="arrow" :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'">
           </span>
         </th>
@@ -59,8 +63,10 @@
             style="width:2px;min-width:2px;"
           :tabindex="((idx+1)*100)">{{idx + recOffset + 1}}</td>
         <td v-for="col in columns" :key="col.colName"
+          :class="{'grid-lines': flgGridLines}"
           :tabindex=" ((idx+1) *100) + col.colIdx" 
           @focus="setFocus(row,col.colName, idx)"
+          @click.exact.stop="setFocus(row,col.colName,idx)"
           ><data-element
             :hasFocus="hasFocus(idx,col.colName)==true"
             @focusx="setFocus(row,col.colName, idx)"
@@ -78,6 +84,7 @@
       </tr>
     </tbody>
   </table>
+  <div id="ttPopUp" style="position:absolute;"></div>
   <div v-if="flgDebug"><input type="checkbox" v-model="flgShowData"/>Show Data  
       <span v-if="flgShowData"> 
         <input type="radio" v-model="debugData" value="showData"/>data 
@@ -166,6 +173,12 @@ export default {
     this.initGrid();
     this.initDefaultRec();
   },
+  mounted() {
+    //ToolTip hider
+    // document.querySelector("#ttPopUp").addEventListener("mouseout", function() {
+    //   util.hideToolTip();
+    // });
+  },
   watch: {
     pFilter(newVal) {
       this.filterKey = newVal;
@@ -192,6 +205,10 @@ export default {
       const cols = this.colDefs.filter(function(col, idx) {
         return col.hidden !== true && col.visible !== false;
       });
+      //Make sure we have column idxs
+      for (let idx = 0; idx < cols.length; idx++) {
+        cols[idx]["colIdx"] = idx;
+      }
       return cols;
     },
     filteredData: function() {
@@ -492,12 +509,14 @@ export default {
       } else {
         if (gridDataURL == null) return; // throw new Error("No data url specified");
         const vm = this;
+
         this.$http.get(gridDataURL).then(response => {
           var recs =
             response.data && response.data.items
               ? response.data.items
               : response.data;
           vm.data = recs;
+
           // vm.i_gridData = JSON.parse(JSON.stringify(vm.data)); //Save a copy
           vm.i_gridData = vm.data.slice(0);
         });
@@ -505,6 +524,18 @@ export default {
     },
     hasFocus: function(idx, colName) {
       return this.focusRow == idx && this.focusColumn == colName;
+    },
+    headerClasses(colName, colClassStr) {
+      let classArr;
+      if (colClassStr) classArr = colClassStr.split(" ");
+      else classArr = new Array();
+      if (this.sortKey == colName) {
+        classArr.push("active");
+      }
+      return classArr.join(" ");
+    },
+    hideHelp() {
+      util.hideToolTip();
     },
     initGrid() {
       // this.setGridColumns(this.colDefs);
@@ -586,6 +617,11 @@ export default {
       //ref="'data-element-' + idx + '-' + col.colName"
       const myHasFocus = this.hasFocus(idx, colName);
     },
+    showHelp(helpText, evt) {
+      const tgt = evt.target;
+      util.showToolTip(helpText, evt);
+      //alert(helpText);
+    },
     resetRecordOffset(idx) {
       this.recOffset = idx;
     },
@@ -653,6 +689,9 @@ export default {
         console.log("updated: " + idx + ": " + col.colName);
       }
       //this.updates.push(row);   // If we are using an array
+      if (col.onUpdate) {
+        this.$emit("update", row, col, idx);
+      }
       const pk = row[this.pk];
       Vue.set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
     }
@@ -688,6 +727,9 @@ tr.grid-lines {
 
 td {
   background-color: #f9f9f9;
+}
+td.grid-lines {
+  border: 1px solid grey;
 }
 
 th,
@@ -781,7 +823,7 @@ tr.selected td {
   margin-left: 2px;
 }
 .disp-row-offset-adjustor > i {
-  margin: 10px;
+  margin: 0 10px;
 }
 .fa.disabled,
 .fa[disabled],
@@ -801,5 +843,18 @@ tr.selected td {
 }
 .num-rows-select {
   margin-left: 5px;
+}
+div#div-controls-container {
+  display: flex;
+  align-items: flex-start;
+}
+div#div-local-controls {
+  flex: 0 1 content;
+  padding-top: 5px;
+}
+div#div-filter-controls {
+  flex: 0 1 content;
+  margin-left: 10px;
+  padding-bottom: 5px;
 }
 </style>

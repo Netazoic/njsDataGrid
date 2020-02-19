@@ -129,7 +129,7 @@ export default {
           break;
         case "select":
           if (baseVal == null) dispVal = baseVal;
-          else {
+          else if (this.col.options) {
             const slctdOpt = this.col.options.find(function(el) {
               return el.value == baseVal;
             });

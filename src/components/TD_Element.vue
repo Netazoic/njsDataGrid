@@ -1,5 +1,10 @@
 <template>
-<span>
+<td @focus="onFocus($event)"  
+  @keyup.ctrl.up="onCtrlUp"
+  @keyup.ctrl.down="onCtrlDown"
+  @keyup.shift.tab="onBackTab"
+  :ref="refName+ '_td'">
+  <span v-if="flgDebug>=5">hasFocus: {{hasFocus}} {{rowIdx}} {{col.colIdx}}</span>
     <cDateTime v-if="flgEdit && inputType=='timestamp'"
         v-model="row[col.colName]"
         @close="onBlur"
@@ -13,9 +18,8 @@
     <input v-if="flgEdit && (inputType == 'text' || inputType == 'date')" 
             :type="inputType"
             v-model="row[col.colName]"
-            @blur="onBlur"
-            @focus="onFocus"
             @change="$emit('change');"
+            @blur="onBlur"
             :tabindex="tabIndex"
             :ref="refName"
             class="data-element-input"
@@ -25,14 +29,15 @@
           v-model="row[col.colName]" 
           @change="$emit('change')"
           :tabIndex="tabIndex"
+          @blur="onBlur"
           :ref="refName"
           class="data-element-input"
           >
       <option value=null>-- select --</option>
       <option v-for="(opt,idx) in col.options" :value="opt.value" :key="idx">{{opt.label}}</option>
     </select>
-    <span @focus="onFocus" v-if="!flgEdit">{{displayVal}}</span>
-</span>
+    <span  v-if="!flgEdit">{{displayVal}}</span>
+</td>
 </template>
 <script>
 import moment from "moment";
@@ -40,36 +45,45 @@ import cDateTime from "./cDateTime.vue";
 const STD_INPUTS = "text|date";
 
 export default {
-  name: "DataElement",
+  name: "td-element",
   props: ["row", "col", "rowIdx", "hasFocus"],
   components: { cDateTime },
   data: function() {
     return {
-      flgDebug: 1
+      flgDebug: 0,
+      focusLevel: 0,
+      flgFocus: false
     };
   },
   watch: {
-    col: function(newVal) {
-      if (col.options) {
-        for (opt in col.options) {
-          console.log(opt);
-        }
+    // flgFocus(newVal) {
+    //    console.log("flgFocus : " + this.col.colName + " : " + newVal);
+    // },
+    hasFocus(newVal) {
+      let colName = this.col ? this.col.colName : "unknown";
+      if (newVal) {
+        this.flgFocus = true;
+        this.focusMe();
+      } else {
+        this.flgFocus = false;
       }
+      if (this.flgDebug >= 2)
+        console.log("hasFocus: " + newVal + "; " + colName);
     }
   },
   computed: {
     flgEdit() {
+      if (!this.flgFocus) return false;
       let editable = this.col.editable;
-      if (editable == null || editable == undefined) editable = true;
-      return this.flgFocus && editable;
-    },
-    flgFocus() {
-      const flg = this.hasFocus;
-      if (this.flgDebug >= 2) console.log(this.refName + " has focus: " + flg);
-      if (flg) {
-        this.focusMe();
+      let editor = false;
+      if ("editor" in this.col) {
+        editor = this.col.editor;
       }
-      return flg;
+      if (editable == null || editable == undefined) editable = true;
+      if (editor === false || (editor !== undefined && editor !== null))
+        editor = true;
+      let flgEdit = editable && editor;
+      return flgEdit;
     },
     tabIndex() {
       return (this.rowIdx + 1) * 100 + this.col.colIdx;
@@ -77,6 +91,7 @@ export default {
     colType() {
       return this.col.type || "text";
     },
+
     inputType() {
       var type;
       switch (this.colType) {
@@ -145,21 +160,39 @@ export default {
   },
   methods: {
     focusMe() {
-      // TODO kills the backtab function
+      // Now working withbacktab function
       this.$nextTick(() => {
         let el = this.$refs[this.refName];
-        if (el) {
-          if (el.$el) el = el.$el; //vue components
-          el.focus();
-        }
+        if (!el) el = this.$refs[this.refName + "_td"];
+        if (el.$el) el = el.$el; //vue components
+        if (el && document.activeElement == el) return;
+        el.focus();
+        if (this.flgDebug >= 2)
+          console.log("focusMe: focusLevel: " + this.refName);
       });
     },
     onBlur() {
-      this.$emit("blur");
+      this.flgFocus = false;
     },
-    onFocus() {
-      this.$emit("focus");
-      // console.log("onFocus: " + this.refName);
+    onFocus($evt) {
+      if (!this.flgFocus) {
+        this.flgFocus = true;
+        this.focusMe();
+      }
+      this.$emit("focusEl");
+    },
+    onBackTab() {
+      if (this.flgDebug >= 2) console.log("DataElement.handleBackTab");
+      this.flgFocus = false;
+      this.$emit("backtab");
+    },
+    onCtrlDown() {
+      this.flgFocus = false;
+      this.$emit("ctrldown");
+    },
+    onCtrlUp() {
+      this.flgFocus = false;
+      this.$emit("ctrlup");
     }
   }
 };
@@ -167,6 +200,6 @@ export default {
 
 <style scoped>
 .data-element-input {
-  width: 90%;
+  width: 95%;
 }
 </style>

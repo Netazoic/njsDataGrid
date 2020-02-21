@@ -22,7 +22,7 @@
           </form>
       </div>
       <div id="div-filter-controls">
-          Search <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp"/>
+          <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search</span> <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp"/>
           <select class="num-rows-select" v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option></select>
           <span class="disp-row-offset-adjustor">
             <i class="fa fa-caret-left" :class="{disabled: recOffset==0}" @click.stop.prevent="adjustRecordOffset(-1)" ></i>
@@ -34,25 +34,28 @@
       </div>
   </div>
   <table id='njs-grid'>
-    <thead>
+    <thead class="table-header">
       <tr>
         <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;" >row</th>
         <th v-for="col in columns" 
           :key="col.colName"
-          @click="sortBy(col.colName)"
+          :data-column-name="col.colName"
+          @click.exact.stop.prevent="sortBy(col.colName)"
           @mouseout="hideHelp"
           :class="headerClasses(col.colName,col.headerClasses)"
-          :style="{width: col.colWidth, 'min-width': col.colWidth }"
+          :style="{'width': col.colWidth, 'min-width': col.colWidth}"
           >
 
           {{ col.colHdr | capitalize }}
           <i v-if="col.help" class="fa fa-info-circle" @click.stop="showHelp(col.help,$event)"/>
-          <span class="arrow" :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'">
+          <span class="arrow" :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'"
+            @click.stop.prevent.exact="sortBy(col.colName)"
+            >
           </span>
         </th>
       </tr>
     </thead>
-    <tbody>
+    <tbody class="table-body">
       <tr v-for="(row,idx) in dispData" :key="row[pk]" 
           class="table-data" 
           :class="{'selected': selectedRows[idx]==true, 'grid-lines':flgGridLines}"
@@ -62,14 +65,17 @@
             @click.shift.exact="toggleSelectRow(idx,false,true)"
             style="width:2px;min-width:2px;"
           :tabindex="((idx+1)*100)">{{idx + recOffset + 1}}</td>
-        <td v-for="col in columns" :key="col.colName"
-          :class="{'grid-lines': flgGridLines}"
-          :tabindex=" ((idx+1) *100) + col.colIdx" 
-          @focus="setFocus(row,col.colName, idx)"
-          @click.exact.stop="setFocus(row,col.colName,idx)"
-          ><data-element
-            :hasFocus="hasFocus(idx,col.colName)==true"
-            @focusx="setFocus(row,col.colName, idx)"
+        <TD_Element v-for="col in columns" :key="col.colName"
+            :class="{'grid-lines': flgGridLines}"
+            :tabindex=" ((idx+1) *100) + col.colIdx" 
+            :hasFocus="hasFocus(idx,col.colIdx)"
+            @focusEl="setFocus(idx,col.colIdx)"
+            @keyup.shift.tab="handleBackTab(row,col,idx,$event)"
+            @keyup.ctrl.down="handleDownArrow(row,col,idx)"
+            @backtab="handleBackTab(row,col,idx)"
+            @ctrldown="handleArrow('down')"
+            @ctrlup="handleArrow('up')"
+            @click.exact.stop="setFocus(idx,col.colIdx)"
             @blur="clearFocus(idx)"
             @update="noteUpdate(row,col,idx)"
             @change="noteUpdate(row,col,idx)"
@@ -79,8 +85,6 @@
             :col="col"
             :ref="'data-element-' + idx + '-' + col.colName"
             />
-
-        </td>
       </tr>
     </tbody>
   </table>
@@ -114,28 +118,32 @@
 </div>
 </template>
 <script>
-import DataElement from "./components/DataElement.vue";
+import TD_Element from "./components/TD_Element.vue";
 import as from "./lib/libAsync";
 import axios from "axios";
 import { stringify } from "querystring";
 import uuid from "uuid/v1";
 import Vue from "vue";
-import moment from "moment";
+import moment, { min } from "moment";
 import util from "./lib/util";
+import * as resize from "./lib/resize";
 
 export default {
   name: "njsGrid",
   props: {
+    gridCode: String,
+    gridID: String,
     pFilter: String,
     colDefs: Array,
     dataURL: String,
     dataDef: Array,
     pDispRows: Number,
     pDefaultRec: Object,
-    urlSaveGrid: String
+    urlSaveGrid: String,
+    pSendOrigGridOnSave: String
   },
   components: {
-    DataElement
+    TD_Element
   },
   data: function() {
     var sortOrders = {};
@@ -153,19 +161,20 @@ export default {
       sortKey: "",
       numDispRows: this.pDispRows || 10,
       xfocusRow: 0,
-      flgDebug: 1,
+      flgDebug: 0,
       flgLocalControls: true,
       flgShowData: false,
       flgDirty: false,
       flgGridLines: true,
       flgExcelMenu: false,
+      flgSendOrigGridOnSave: this.pSendOrigGridOnSave || false,
       filterKey: this.filterKey,
       recOffset: 0,
       sortOrders: sortOrders,
       debugData: "showData",
       idxAdd: 0,
-      focusRow: 0,
-      focusColumn: 0
+      focusRow: undefined,
+      focusCol: undefined
     };
   },
   created() {
@@ -174,10 +183,9 @@ export default {
     this.initDefaultRec();
   },
   mounted() {
-    //ToolTip hider
-    // document.querySelector("#ttPopUp").addEventListener("mouseout", function() {
-    //   util.hideToolTip();
-    // });
+    const vm = this;
+    document.addEventListener("ctrl-down", this.handleDownArrow);
+    resize.init(vm, "table-header");
   },
   watch: {
     pFilter(newVal) {
@@ -185,6 +193,7 @@ export default {
     },
     filterKey(newVal) {
       this.recOffset = 0;
+      if (this.focusRow !== undefined) this.clearFocus();
       return newVal;
     },
     dataURL(newVal) {
@@ -284,22 +293,6 @@ export default {
       return dispRecs;
     },
 
-    debounce(func, wait, immediate) {
-      var timeout;
-      return function() {
-        debugger;
-        var context = this,
-          args = arguments;
-        var later = function() {
-          timeout = null;
-          if (!immediate) func.apply(context, args);
-        };
-        var callNow = immediate && !timeout;
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-        if (callNow) func.apply(context, args);
-      };
-    },
     pk() {
       const col = this.colDefs.find(function(el) {
         return el.pk;
@@ -333,48 +326,39 @@ export default {
   },
   methods: {
     nullOp: function(evt) {
-      console.log(evt);
+      // console.log(evt);
       //nada
     },
     addRow: function() {
+      this.clearFocus();
       this.clearSelected();
       let rec = Object.assign({}, this.defaultRec);
-      // Set the pk to a uuid
+      let pk;
+
       const colDefs = this.colDefs;
       const pkCol = colDefs.find(function(col) {
         return col.pk === true;
       });
       if (pkCol) {
-        rec[pkCol.colName] = uuid();
+        // Set the pk to a uuid
+        pk = uuid();
+        rec[pkCol.colName] = pk;
       }
       // insert at top of stack
       this.data.unshift(rec);
-      this.noteAdd(rec);
+      this.noteAdd(rec, pk);
       //Select first element in the row
-      //this.tabIndex + "_" + this.col.colName;
-      //const refName = 100 + "_" + this.colDefs[0].colName;
-      //const refName = "tr-data-0";
-      // TODO  select first input not working
-      // find first visible column
-      let col = this.columns.find(col => {
-        return col.hidden !== true;
+      const vm = this;
+      this.$nextTick(() => {
+        vm.setFocus(0, 0);
+        //force a recompute
+        const myHasFocus = this.hasFocus();
       });
-      //TODO figure out how to focus on new row
-      // const refName = "data-element-0-" + col.colName;
-      // var ref = this.$refs[refName];
-      // if (ref) {
-      //   var el = ref[0] ? ref[0] : ref;
-      //   if (!el) {
-      //     debugger;
-      //   }
-      //   if (el.$el) el = el.$el; //vue components
-      //   el.focus();
-      // }
     },
 
     clearFocus: function(idx) {
-      this.focusRow = null;
-      this.focusColumn = null;
+      this.focusRow = undefined;
+      this.focusColumn = undefined;
     },
 
     clearSelected: function() {
@@ -413,40 +397,47 @@ export default {
       };
     },
     deleteRows() {
-      const slctdCount = Object.keys(this.selectedRows).length;
+      //Clear negative selected rows
+      let slctdCount = Object.keys(this.selectedRows).length;
+      const vm = this;
+      Object.keys(this.selectedRows).forEach(function(key, idx) {
+        if (!vm.selectedRows[key]) {
+          delete vm.selectedRows[key];
+          slctdCount--;
+        }
+      });
       if (slctdCount == 0) return;
       //const flg = confirm("Delete " + slctdCount + " selected rows?");
       const flg = true;
       if (!flg) return;
       var rec;
-      const vm = this;
+
       const pka = this.pk;
       var currentDeletes = {};
-      // Load up the this.deletes collection before we start deleting things
-      for (var idx in this.selectedRows) {
-        delete this.selectedRows[idx]; // Unselect the row here??
-        rec = this.filteredData[idx];
+      // Delete in reverse order
+      let reversedIdx = Object.keys(this.selectedRows).reverse();
+      for (var idx in reversedIdx) {
+        let key = reversedIdx[idx];
+        delete this.selectedRows[key]; // Unselect the row here??
+        rec = this.filteredData[key];
         if (!rec) continue; // Deleted row ??
-        rec = Object.assign({}, rec); // Make a clone
-        if (rec[pka]) Vue.set(this.deletes, rec[pka], rec);
+        let rec2 = Object.assign({}, rec); // Make a clone
+        let pk = rec[pka];
+        Vue.set(this.deletes, pk, rec2);
         //Vue.set(vm.data, dataIdx, null);
-        currentDeletes[rec[pka]] = rec[pka];
+        currentDeletes[pk] = rec2;
+        //Delete the record from filteredData
+        key = key - 0; //convert key to a number
+        this.filteredData.splice(key, 1);
       }
-      // Delete the original rec out of this.data
-      // This will reactively remove the record from this.filteredData;
+      //Don't bother sending deletes for new records -- they aren't in the database anyway
       for (var pk in currentDeletes) {
-        const dataIdx = vm.data.findIndex(function(dataRec, idx) {
-          return dataRec[pka] == pk;
-        });
-        vm.data.splice(dataIdx, 1);
-        // Also remove from the newrecs collection
-        Object.keys(this.newrecs).forEach(function(recIdx, idx) {
-          const newRec = vm.newrecs[recIdx];
-          if (newRec.pk == pk) {
-            delete vm.newrecs[recIdx];
-          }
-        });
+        if (this.newrecs[pk]) {
+          delete vm.newrecs[pk];
+          delete vm.deletes[pk];
+        }
       }
+      this.$emit("noteDelete");
     },
     diffData() {
       // Does not work -- only a shallow compare
@@ -522,8 +513,26 @@ export default {
         });
       }
     },
-    hasFocus: function(idx, colName) {
-      return this.focusRow == idx && this.focusColumn == colName;
+    handleArrow: function(direction) {
+      let focusRow = this.focusRow;
+      if (direction == "down") focusRow++;
+      else focusRow--;
+      this.setFocus(focusRow, this.focusCol);
+    },
+    handleBackTab: function(row, col, rowIdx, $event) {
+      let newColIdx = col.colIdx - 1;
+      if (newColIdx < 0) newColIdx = 0;
+      //Set focus to previous column
+      this.setFocus(rowIdx, newColIdx);
+      if (this.flgDebug >= 4)
+        console.log("handleBackTab: focus on " + newColIdx);
+    },
+    hasFocus: function(idx, colIdx) {
+      if (this.focusRow === idx && this.focusCol === colIdx) {
+        return true;
+      } else return false;
+      return;
+      // return false;
     },
     headerClasses(colName, colClassStr) {
       let classArr;
@@ -571,31 +580,42 @@ export default {
       this.sortKey = "";
       this.sortOrders = {};
       this.data = this.i_gridData.slice(0);
+      this.$emit("reset");
     },
     saveGrid() {
       var url = this.urlSaveGrid;
       //const diff = this.diffData();
       var dataGrid = {};
       //dataGrid.data = this.data;
+      dataGrid.gridID = this.gridID;
       dataGrid.updates = this.updates;
       dataGrid.deletes = this.deletes;
       dataGrid.newrecs = this.newrecs;
+      //remove newrecs from updates collection
+      for (let key in dataGrid.newrecs) {
+        delete dataGrid.updates[key];
+      }
+      if (this.flgSendOrigGridOnSave) {
+        dataGrid.origGrid = this.i_gridData;
+      }
       if (!url) {
         this.$emit("saveGrid", dataGrid);
       } else {
         var fd = new FormData();
         fd.append("dataGrid", JSON.stringify(dataGrid));
         var fLoad = function(ret) {
-          alert("Grid updates saved");
+          // nada
         };
         var fErr = null;
         const vm = this;
         as.xhrSubmit(fd, url, fLoad, fErr)
-          .then(function(data) {
+          .then(function(ret) {
             // Clear the collections on a successful save
             vm.deletes = {};
             vm.updates = {};
             vm.newrecs = {};
+            alert("Grid updates saved");
+            vm.$emit("saveGrid"); //For tracking flgDirty in parent container
           })
           .catch(function(err) {
             alert(err);
@@ -603,20 +623,21 @@ export default {
       }
     },
 
-    setFocus: function(row, colName, idx) {
-      if (this.flgDebug >= 4)
-        console.log(
-          "setFocus: " + idx + ":" + colName + ":: " + this.xfocusRow
-        );
-      if (this.xfocusRow != idx) {
+    setFocus: function(rowIdx, colIdx) {
+      if (this.xfocusRow != rowIdx) {
         this.clearFocus();
       }
-      this.xfocusRow = idx;
-      this.focusRow = idx;
-      this.focusColumn = colName;
-      //ref="'data-element-' + idx + '-' + col.colName"
-      const myHasFocus = this.hasFocus(idx, colName);
+      this.xfocusRow = rowIdx;
+      this.focusRow = rowIdx;
+      this.focusCol = colIdx;
+      //ref="'data-element-' + rowIdx + '-' + col.colName"
+      const myHasFocus = this.hasFocus(rowIdx, colIdx);
+      if (this.flgDebug >= 5)
+        console.log(
+          "setFocus: " + rowIdx + ":" + colIdx + ":: " + this.xfocusRow
+        );
     },
+
     showHelp(helpText, evt) {
       const tgt = evt.target;
       util.showToolTip(helpText, evt);
@@ -632,6 +653,7 @@ export default {
       this.recOffset = offset;
     },
     sortBy: function(key) {
+      this.clearFocus();
       this.sortKey = key;
       var sortKey = key;
       let currVal = this.sortOrders[key];
@@ -642,6 +664,10 @@ export default {
       if (this.flgDebug > 3) {
         console.log(this.sortOrders);
       }
+    },
+    toggleDebug() {
+      if (this.flgDebug) this.flgDebug--;
+      else this.flgDebug++;
     },
     toggleExcelMenu() {
       this.flgExcelMenu = !this.flgExcelMenu;
@@ -662,6 +688,10 @@ export default {
     toggleSelectRow(idx, flgCtrl, flgShift) {
       if (this.flgDebug >= 2) console.log(idx);
       const newVal = !this.selectedRows[idx];
+      // if (!newVal) {
+      //   Vue.set(this.selectedRows, idx, null);
+      //   return;
+      // }
       // Clear existing unless flgCtrl, flgShift
       if (!flgCtrl && !flgShift) this.selectedRows = {}; // re-init
       if (flgShift) {
@@ -673,16 +703,20 @@ export default {
         }
       } else if (flgCtrl) {
         // Toggle this row in the selected set
-        // TODO not working?
-        // debugger;
-        Vue.set(this.selectedRows, idx, newVal);
+        if (!newVal) {
+          Vue.set(this.selectedRows, idx, false);
+          delete this.selectedRows[idx];
+        } else Vue.set(this.selectedRows, idx, newVal);
       } else {
         Vue.set(this.selectedRows, idx, newVal);
       }
     },
-    noteAdd: function(row, col, idx) {
-      Vue.set(this.newrecs, this.idxAdd, row);
-      this.idxAdd++;
+    noteAdd: function(row, pk) {
+      if (!pk) {
+        Vue.set(this.newrecs, this.idxAdd, row);
+        this.idxAdd++;
+      } else Vue.set(this.newrecs, pk, row);
+      this.$emit("noteAdd");
     },
     noteUpdate: function(row, col, idx) {
       if (this.flgDebug >= 3) {
@@ -694,7 +728,12 @@ export default {
       }
       const pk = row[this.pk];
       Vue.set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
+      this.$emit("noteUpdate");
     }
+  },
+  beforeDestroy() {
+    const vm = this;
+    resize.tearDown(vm);
   }
 };
 </script>

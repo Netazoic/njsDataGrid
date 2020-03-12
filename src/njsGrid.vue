@@ -89,7 +89,12 @@
     </tbody>
   </table>
   <div id="ttPopUp" style="position:absolute;"></div>
-  <div v-if="flgDebug"><input type="checkbox" v-model="flgShowData"/>Show Data  
+  <div v-if="flgDebug">
+    <div class="controls">
+      <input type="checkbox" v-model="flgShowPK" @click="togglePK"/><label>Show PK?</label>
+    </div>
+    <div class="controls">
+    <input type="checkbox" v-model="flgShowData"/><label>Show Data</label>  
       <span v-if="flgShowData"> 
         <input type="radio" v-model="debugData" value="showData"/>data 
         <input type="radio" v-model="debugData" value="showFilteredData">Filterd
@@ -98,6 +103,7 @@
         <input type="radio" v-model="debugData" value="showDeletes"/> deletes
         <input type="radio" v-model="debugData" value="showSelected"/> selected Rows
       </span>
+    </div>
   </div>
   <transition name="fade2">
     <div v-if="flgShowData">
@@ -164,6 +170,7 @@ export default {
       flgDebug: 0,
       flgLocalControls: true,
       flgShowData: false,
+      flgShowPK: false,
       flgDirty: false,
       flgGridLines: true,
       flgExcelMenu: false,
@@ -671,6 +678,13 @@ export default {
     },
     toggleExcelMenu() {
       this.flgExcelMenu = !this.flgExcelMenu;
+    },
+    togglePK() {
+      // this.flgShowPK = !this.flgShowPK;  -- controlled by v-model
+      const pkCol = this.colDefs.find(function(col, idx) {
+        return col.pk == true;
+      });
+      pkCol.hidden = this.flgShowPK;
     },
 
     toggleSelectAll() {

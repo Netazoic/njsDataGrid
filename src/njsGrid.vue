@@ -8,7 +8,7 @@
             <button @click.prevent.stop="addRow">Add Row</button>
             <button @click.prevent.stop="deleteRows">Delete</button>
             <button @click.prevent.stop="resetGrid">Reset</button>
-            <button @click.prevent.stop="toggleExcelMenu" title="Export grid data" :disabled="!data.length">
+            <button @click.prevent.stop="toggleExcelMenu" title="Export grid data" :disabled="!data.length" v-if="flgExportEnabled">
                 <i class="fa fas fa-file-excel" 
                 :class="{disabled:!data.length}"
                 title="export grid data as excel file">&nbsp;Export</i></button>
@@ -168,6 +168,7 @@ export default {
       numDispRows: this.pDispRows || 10,
       xfocusRow: 0,
       flgDebug: 0,
+      flgExportEnabled: false,
       flgLocalControls: true,
       flgShowData: false,
       flgShowPK: false,

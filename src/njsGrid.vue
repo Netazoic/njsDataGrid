@@ -4,33 +4,31 @@
     <div id="div-controls-container">
       <div id="div-local-controls">
         <form v-if="flgLocalControls">
-            <button @click.prevent.stop="saveGrid">Save</button> 
-            <button @click.prevent.stop="addRow">Add Row</button>
-            <button @click.prevent.stop="deleteRows">Delete</button>
-            <button @click.prevent.stop="resetGrid">Reset</button>
-            <button @click.prevent.stop="toggleExcelMenu" title="Export grid data" :disabled="!data.length" v-if="flgExportEnabled">
-                <i class="fa fas fa-file-excel" 
-                :class="{disabled:!data.length}"
-                title="export grid data as excel file">&nbsp;Export</i></button>
+            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="saveGrid" type="button" title="Save table"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">save</i>Save</button>
+            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"@click.prevent.stop="addRow" type="button" title="Add Row"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">add</i>Add Row</button>
+            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="deleteRows" type="button"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">delete</i>Delete Row</button>
+            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="resetGrid" type="button"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">undo</i>Reset</button>
+
+            <button @click.prevent.stop="toggleExcelMenu" title="Export grid data" :disabled="!data.length" v-if="flgExportEnabled"><i class="fa fas fa-file-excel" :class="{disabled:!data.length}" title="export grid data as excel file">&nbsp;Export</i></button>
             <div id="menu-excel" :class="{hidden:!flgExcelMenu, visible:flgExcelMenu}" class="modal">
               <div class="modal-content">
-              <span class="close" @click="toggleExcelMenu">&times;</span>
-              <button @click.prevent.stop="exportExcelData(false,$event)" ><i class="fas fa-file-export" title="Export columns that are visible in the grid"></i>&nbsp; Filtered</button>
-              <button @click.prevent.stop="exportExcelData(true,$event)" title="export grid data as excel file"><i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL</button>
+                <span class="close" @click="toggleExcelMenu">&times;</span>
+                <button @click.prevent.stop="exportExcelData(false,$event)" ><i class="fas fa-file-export" title="Export columns that are visible in the grid"></i>&nbsp; Filtered</button>
+                <button @click.prevent.stop="exportExcelData(true,$event)" title="export grid data as excel file"><i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL</button>
               </div>
             </div>
           </form>
-      </div>
-      <div id="div-filter-controls">
-          <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search</span> <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp"/>
-          <select class="num-rows-select" v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option></select>
-          <span class="disp-row-offset-adjustor">
-            <i class="fa fa-caret-left" :class="{disabled: recOffset==0}" @click.stop.prevent="adjustRecordOffset(-1)" ></i>
-            <i class="fa fa-caret-right" :class="{disabled: upperDispIdx >= numAllRows}" @click.stop.prevent="adjustRecordOffset(1)"></i>
-          </span>
-          <span class="disp-row-count-selector">
-            {{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRows }}
-          </span>
+          <div id="div-filter-controls">
+              <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search </span> <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp"/>
+              <select class="num-rows-select" v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option></select>
+              <span class="disp-row-offset-adjustor">
+                <i class="fa fa-caret-left" :class="{disabled: recOffset==0}" @click.stop.prevent="adjustRecordOffset(-1)" ></i>
+                <i class="fa fa-caret-right" :class="{disabled: upperDispIdx >= numAllRows}" @click.stop.prevent="adjustRecordOffset(1)"></i>
+              </span>
+              <span class="disp-row-count-selector">
+                {{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRows }}
+              </span>
+          </div>
       </div>
   </div>
   <table id='njs-grid'>
@@ -761,8 +759,7 @@ body {
 }
 
 table {
-  border: 2px solid #7a8d84;
-  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,0.54);
   background-color: #fff;
 }
 
@@ -903,12 +900,16 @@ div#div-controls-container {
   align-items: flex-start;
 }
 div#div-local-controls {
-  flex: 0 1 content;
+  display: flex;
+  flex: 1 1 auto;
   padding-top: 5px;
 }
 div#div-filter-controls {
-  flex: 0 1 content;
+  flex: 1 1 auto;
   margin-left: 10px;
   padding-bottom: 5px;
+}
+div#div-local-controls button {
+  margin:0 5px;
 }
 </style>

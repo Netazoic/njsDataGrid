@@ -5,7 +5,7 @@
       <div id="div-local-controls">
         <form v-if="flgLocalControls">
             <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="saveGrid" type="button" title="Save table"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">save</i>Save</button>
-            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"@click.prevent.stop="addRow" type="button" title="Add Row"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">add</i>Add Row</button>
+            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="addRow" type="button" title="Add Row"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">add</i>Add Row</button>
             <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="deleteRows" type="button"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">delete</i>Delete Row</button>
             <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="resetGrid" type="button"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">undo</i>Reset</button>
 
@@ -64,7 +64,7 @@
             style="width:2px;min-width:2px;"
           :tabindex="((idx+1)*100)">{{idx + recOffset + 1}}</td>
         <TD_Element v-for="col in columns" :key="col.colName"
-            :class="{'grid-lines': flgGridLines}"
+            :class="{'grid-lines': flgGridLines, 'error': col.hasError}"
             :tabindex=" ((idx+1) *100) + col.colIdx" 
             :hasFocus="hasFocus(idx,col.colIdx)"
             @focusEl="setFocus(idx,col.colIdx)"
@@ -160,7 +160,7 @@ export default {
       deletes: {},
       newrecs: {},
       defaultRec: this.pDefaultRec || {},
-      i_gridData: [],
+      i_gridData: [], //Saved version of original grid data, for reset. //TODO only working at shallow-clone level
       selectedRows: {},
       sortKey: "",
       numDispRows: this.pDispRows || 10,
@@ -759,7 +759,7 @@ body {
 }
 
 table {
-  border: 1px solid rgba(0,0,0,0.54);
+  border: 1px solid rgba(0, 0, 0, 0.54);
   background-color: #fff;
 }
 
@@ -910,6 +910,6 @@ div#div-filter-controls {
   padding-bottom: 5px;
 }
 div#div-local-controls button {
-  margin:0 5px;
+  margin: 0 5px;
 }
 </style>

@@ -80,5 +80,124 @@ function showToolTip(msg, evt) {
     $div.show(200);
 }
 
+var validateRows = function(colDefs, mi, recs) {
+    var flgValid = true;
+    var alertMsg = "";
+    var errorCells = [];
+    var miKeys = Object.keys(mi);
+    if (!Object.keys(mi).length) return true; //No modified items, notthing to validate
+    var pkCol = colDefs.find(function(col, idx) {
+        return (col.pk == true);
+    });
+    var pkIdx = pkCol.colIdx;
+    // Limit validation to just updated rows
+    var pkIDs = [];
+    mi.each(function(rec, idx) {
+        pkIDs.push(rec[pkCol.colName]);
+    });
+    var $rows = $("div.dojoxGrid-master-view").find("table.dojoxGrid-row-table");
+    $rows = recs.filter(function(rec, idx) {
+        // Check if this row is in the mi collection
+        var atID = atIDs[idx];
+        return (atID in mi);
+    });
+    // convert collection of tables to collection of rows
+    var convRows = [];
+    $rows.each(function(idx, row) {
+        convRows[idx] = row.rows[0];
+    });
+    $rows = convRows;
+    //Make a field required
+    for (idx in colDefs) {
+        var col = colDefs[idx];
+        var colHdr = col.name.replace(/<i.*<\/i>/, "");
+        var $cells = new Array();
+        var $allCells = $("td[idx=" + idx + "]");  // Used for unique pk checking
+        $rows.forEach(function(row, rdx) {
+            var cell = row.cells[idx];
+            cell = $(cell);
+            $cells.push(cell);
+        });
+        var cellVals = [], allCellVals = [];
+        $cells.forEach(function(cell, cdx) {
+            cellVals[cdx] = cell.text();
+            // cell.innerText || cell.textContent;
+        });
+        $allCells.each(function(rdx, cell) {
+            allCellVals[rdx] = cell.innerText || cell.textContent;
+        });
+        if (col.required) {
+            var emptyCells = $cells.filter(function(cell, idx) {
+                return cell.text() == '';
+            });
+            if (emptyCells.length) {
+                flgValid = false;
+                errorCells.push(...emptyCells);
+                alertMsg += ("Please set a value for " + colHdr + "\n");
+            }
+        }
+        if (col.type == 'numeric') {
+            var min = col.min;
+            var max = col.max;
+            //			var $cells = $("td[idx=" + idx +"]");
+            //			var cellVals =[];
+            var overMax = [], underMin = [];
+            var nonNumbers = $cells.filter(function(cell, idx) {
+                return isNaN(cell.text());
+            });
+            if (nonNumbers.length) {
+                flgValid = false;
+                errorCells.push(...nonNumbers);
+                alertMsg += ("The value for  " + colHdr + " must be a number.\n");
+            }
+            if (max) {
+                overMax = $cells.filter(function(cell, idx) {
+                    return cell.text() > max;
+                });
+            }
+            if (min != null) {
+                underMin = $cells.filter(function(cell, idx) {
+                    return cell.text() < min;
+                });
+            }
+
+            if (overMax.length) {
+                flgValid = false;
+                errorCells.push(...overMax);
+                alertMsg += ("The value for " + colHdr + " can be a maximum of " + max + "\n");
+            }
+            if (underMin.length) {
+                flgValid = false;
+                errorCells.push(...underMin);
+                alertMsg += ("The value for " + colHdr + " cannot be less than " + min + "\n");
+            }
+        }
+        if (col.unique) {
+            const dups = $allCells.filter((i, c) => {
+                //Find cells that have multiple matches in cellVals
+                const cellVal = c.textContent;
+                if (!cellVal || cellVal === '') return false;   //blanks are allowed in some unique value fields
+                return allCellVals.indexOf(cellVal) !== allCellVals.lastIndexOf(cellVal);
+            });
+            //console.info(Array.from(dups)) // using Array.from so it can be logged
+            if (dups.length) {
+                flgValid = false;
+                errorCells.push(...dups);
+                alertMsg += ("Please use unique values for " + colHdr + "\n");
+            }
+        }
+
+    }
+    if (!flgValid) {
+        errorCells = $(errorCells);
+        errorCells.each(function(idx) {
+            $(this).addClass("error");
+        });
+        errorCells[0].focus();
+        var leftPos = $(errorCells[0]).scrollLeft();
+        alert(alertMsg);
+    }
+    return flgValid;
+}
 
 

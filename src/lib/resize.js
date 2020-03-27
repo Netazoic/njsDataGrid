@@ -42,7 +42,7 @@ export function syncColumnWidths(vm, widthsOverride) {
         widths = getColumnWidths(vm);
     }
     vm.columns.forEach((cd, i) => {
-        Vue.set(cd, "colWidth", widths[i]);
+        Vue.set(cd, "width", widths[i]);
     });
     // FOLLOWING DEPRECATED
     // May want to bring it back if we go back to a two-table header/body setup.

@@ -1,10 +1,10 @@
 
 export const colDefs = [
-    { colName: "name", colHdr: "Hero Name", colIdx: 0 },
-    { colName: "power", colHdr: "Power", colIdx: 1 },
+    { colName: "name", header: "Hero Name", colIdx: 0 },
+    { colName: "power", header: "Power", colIdx: 1 },
     {
         colName: "birthdate",
-        colHdr: "DOB",
+        header: "DOB",
         colIdx: 1,
         type: "date",
         editable: false

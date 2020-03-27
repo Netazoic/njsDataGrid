@@ -41,10 +41,10 @@
           @click.exact.stop.prevent="sortBy(col.colName)"
           @mouseout="hideHelp"
           :class="headerClasses(col.colName,col.headerClasses)"
-          :style="{'width': col.colWidth, 'min-width': col.colWidth}"
+          :style="{'width': col.width, 'min-width': col.width}"
           >
 
-          {{ col.colHdr | capitalize }}
+          {{ col.header | capitalize }}
           <i v-if="col.help" class="fa fa-info-circle" @click.stop="showHelp(col.help,$event)"/>
           <span class="arrow" :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'"
             @click.stop.prevent.exact="sortBy(col.colName)"
@@ -474,7 +474,7 @@ export default {
       tab_text += "<tr>";
       for (var colIdx in colsExport) {
         col = colsExport[colIdx];
-        tab_text += "<th>" + col.colHdr + "</th>";
+        tab_text += "<th>" + col.header + "</th>";
       }
       tab_text += "</tr>";
       for (j = 0; j < exportData.length; j++) {

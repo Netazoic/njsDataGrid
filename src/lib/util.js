@@ -110,7 +110,7 @@ var validateRows = function(colDefs, mi, recs) {
     //Make a field required
     for (idx in colDefs) {
         var col = colDefs[idx];
-        var colHdr = col.name.replace(/<i.*<\/i>/, "");
+        var header = col.name.replace(/<i.*<\/i>/, "");
         var $cells = new Array();
         var $allCells = $("td[idx=" + idx + "]");  // Used for unique pk checking
         $rows.forEach(function(row, rdx) {
@@ -133,7 +133,7 @@ var validateRows = function(colDefs, mi, recs) {
             if (emptyCells.length) {
                 flgValid = false;
                 errorCells.push(...emptyCells);
-                alertMsg += ("Please set a value for " + colHdr + "\n");
+                alertMsg += ("Please set a value for " + header + "\n");
             }
         }
         if (col.type == 'numeric') {
@@ -148,7 +148,7 @@ var validateRows = function(colDefs, mi, recs) {
             if (nonNumbers.length) {
                 flgValid = false;
                 errorCells.push(...nonNumbers);
-                alertMsg += ("The value for  " + colHdr + " must be a number.\n");
+                alertMsg += ("The value for  " + header + " must be a number.\n");
             }
             if (max) {
                 overMax = $cells.filter(function(cell, idx) {
@@ -164,12 +164,12 @@ var validateRows = function(colDefs, mi, recs) {
             if (overMax.length) {
                 flgValid = false;
                 errorCells.push(...overMax);
-                alertMsg += ("The value for " + colHdr + " can be a maximum of " + max + "\n");
+                alertMsg += ("The value for " + header + " can be a maximum of " + max + "\n");
             }
             if (underMin.length) {
                 flgValid = false;
                 errorCells.push(...underMin);
-                alertMsg += ("The value for " + colHdr + " cannot be less than " + min + "\n");
+                alertMsg += ("The value for " + header + " cannot be less than " + min + "\n");
             }
         }
         if (col.unique) {
@@ -183,7 +183,7 @@ var validateRows = function(colDefs, mi, recs) {
             if (dups.length) {
                 flgValid = false;
                 errorCells.push(...dups);
-                alertMsg += ("Please use unique values for " + colHdr + "\n");
+                alertMsg += ("Please use unique values for " + header + "\n");
             }
         }
 

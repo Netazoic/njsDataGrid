@@ -191,9 +191,25 @@ export default {
   mounted() {
     const vm = this;
     document.addEventListener("ctrl-down", this.handleDownArrow);
-    resize.init(vm, "table-header");
   },
   watch: {
+    colDefs(newVal) {
+      if (!newVal || !newVal.length) return;
+      const vm = this;
+      newVal.forEach(function(col) {
+        vm.sortOrders[col.colName] = 1;
+      });
+      // set the column resize handles after a colDef change
+      // need to wait for a nextTick to allow th elements to be mounted
+
+      this.$nextTick(function() {
+        resize.init(vm, "table-header");
+      });
+    },
+    pDefaultRec(newVal) {
+      this.defaultRec = newVal;
+      this.initDefaultRec();
+    },
     pFilter(newVal) {
       this.filterKey = newVal;
     },
@@ -327,7 +343,12 @@ export default {
   },
   filters: {
     capitalize: function(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1);
+      try {
+        if (str == null) return null;
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      } catch (err) {
+        // column has no value for header
+      }
     }
   },
   methods: {

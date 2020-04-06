@@ -1,71 +1,142 @@
 <template>
-<div>
-    <div id="asyncticator-mount"/>
+  <div>
+    <div id="asyncticator-mount" />
     <div id="div-controls-container">
       <div id="div-local-controls">
         <form v-if="flgLocalControls">
-            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="saveGrid" type="button" title="Save table"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">save</i>Save</button>
-            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="addRow" type="button" title="Add Row"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">add</i>Add Row</button>
-            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="deleteRows" type="button"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">delete</i>Delete Row</button>
-            <button class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised" @click.prevent.stop="resetGrid" type="button"><i class="material-icons" style="font-size: 16px; margin-right: 5px;">undo</i>Reset</button>
-
-            <button @click.prevent.stop="toggleExcelMenu" title="Export grid data" :disabled="!data.length" v-if="flgExportEnabled"><i class="fa fas fa-file-excel" :class="{disabled:!data.length}" title="export grid data as excel file">&nbsp;Export</i></button>
-            <div id="menu-excel" :class="{hidden:!flgExcelMenu, visible:flgExcelMenu}" class="modal">
-              <div class="modal-content">
-                <span class="close" @click="toggleExcelMenu">&times;</span>
-                <button @click.prevent.stop="exportExcelData(false,$event)" ><i class="fas fa-file-export" title="Export columns that are visible in the grid"></i>&nbsp; Filtered</button>
-                <button @click.prevent.stop="exportExcelData(true,$event)" title="export grid data as excel file"><i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL</button>
-              </div>
-            </div>
-          </form>
-          <div id="div-filter-controls">
-              <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search </span> <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp"/>
-              <select class="num-rows-select" v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option></select>
-              <span class="disp-row-offset-adjustor">
-                <i class="fa fa-caret-left" :class="{disabled: recOffset==0}" @click.stop.prevent="adjustRecordOffset(-1)" ></i>
-                <i class="fa fa-caret-right" :class="{disabled: upperDispIdx >= numAllRows}" @click.stop.prevent="adjustRecordOffset(1)"></i>
-              </span>
-              <span class="disp-row-count-selector">
-                {{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRows }}
-              </span>
-          </div>
-      </div>
-  </div>
-  <table id='njs-grid'>
-    <thead class="table-header">
-      <tr>
-        <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;" >row</th>
-        <th v-for="col in columns" 
-          :key="col.colName"
-          :data-column-name="col.colName"
-          @click.exact.stop.prevent="sortBy(col.colName)"
-          @mouseout="hideHelp"
-          :class="headerClasses(col.colName,col.headerClasses)"
-          :style="{'width': col.width, 'min-width': col.width}"
+          <button
+            class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+            @click.prevent.stop="saveGrid"
+            type="button"
+            title="Save table"
           >
+            <i class="material-icons" style="font-size: 16px; margin-right: 5px;">save</i>Save
+          </button>
+          <button
+            class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+            @click.prevent.stop="addRow"
+            type="button"
+            title="Add Row"
+          >
+            <i class="material-icons" style="font-size: 16px; margin-right: 5px;">add</i>Add Row
+          </button>
+          <button
+            class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+            @click.prevent.stop="deleteRows"
+            type="button"
+          >
+            <i class="material-icons" style="font-size: 16px; margin-right: 5px;">delete</i>Delete Row
+          </button>
+          <button
+            class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+            @click.prevent.stop="resetGrid"
+            type="button"
+          >
+            <i class="material-icons" style="font-size: 16px; margin-right: 5px;">undo</i>Reset
+          </button>
 
-          {{ col.header | capitalize }}
-          <i v-if="col.help" class="fa fa-info-circle" @click.stop="showHelp(col.help,$event)"/>
-          <span class="arrow" :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'"
-            @click.stop.prevent.exact="sortBy(col.colName)"
-            >
+          <button
+            @click.prevent.stop="toggleExcelMenu"
+            title="Export grid data"
+            :disabled="!data.length"
+            v-if="flgExportEnabled"
+          >
+            <i
+              class="fa fas fa-file-excel"
+              :class="{disabled:!data.length}"
+              title="export grid data as excel file"
+            >&nbsp;Export</i>
+          </button>
+          <div id="menu-excel" :class="{hidden:!flgExcelMenu, visible:flgExcelMenu}" class="modal">
+            <div class="modal-content">
+              <span class="close" @click="toggleExcelMenu">&times;</span>
+              <button @click.prevent.stop="exportExcelData(false,$event)">
+                <i class="fas fa-file-export" title="Export columns that are visible in the grid"></i>&nbsp; Filtered
+              </button>
+              <button
+                @click.prevent.stop="exportExcelData(true,$event)"
+                title="export grid data as excel file"
+              >
+                <i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL
+              </button>
+            </div>
+          </div>
+        </form>
+        <div id="div-filter-controls">
+          <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search</span>
+          <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp" />
+          <select class="num-rows-select" v-model="numDispRows">
+            <option value="10">10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="100">500</option>
+            <option value="-1">All</option>
+          </select>
+          <span class="disp-row-offset-adjustor">
+            <i
+              class="fa fa-caret-left"
+              :class="{disabled: recOffset==0}"
+              @click.stop.prevent="adjustRecordOffset(-1)"
+            ></i>
+            <i
+              class="fa fa-caret-right"
+              :class="{disabled: upperDispIdx >= numAllRows}"
+              @click.stop.prevent="adjustRecordOffset(1)"
+            ></i>
           </span>
-        </th>
-      </tr>
-    </thead>
-    <tbody class="table-body">
-      <tr v-for="(row,idx) in dispData" :key="row[pk]" 
-          class="table-data" 
+          <span
+            class="disp-row-count-selector"
+          >{{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRows }}</span>
+        </div>
+      </div>
+    </div>
+    <table id="njs-grid">
+      <thead class="table-header">
+        <tr>
+          <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;">row</th>
+          <th
+            v-for="col in columns"
+            :key="col.colName"
+            :data-column-name="col.colName"
+            @click.exact.stop.prevent="sortBy(col.colName)"
+            @mouseout="hideHelp"
+            :class="headerClasses(col.colName,col.headerClasses)"
+            :style="{'width': col.width, 'min-width': col.width}"
+          >
+            {{ col.header | capitalize }}
+            <i
+              v-if="col.help"
+              class="fa fa-info-circle"
+              @click.stop="showHelp(col.help,$event)"
+            />
+            <span
+              class="arrow"
+              :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'"
+              @click.stop.prevent.exact="sortBy(col.colName)"
+            ></span>
+          </th>
+        </tr>
+      </thead>
+      <tbody class="table-body">
+        <tr
+          v-for="(row,idx) in dispData"
+          :key="row[pk]"
+          class="table-data"
           :class="{'selected': selectedRows[idx]==true, 'grid-lines':flgGridLines}"
-          :ref="'tr-data-' + idx">
-        <td @click.exact="toggleSelectRow(idx)" 
+          :ref="'tr-data-' + idx"
+        >
+          <td
+            @click.exact="toggleSelectRow(idx)"
             @click.ctrl.exact="toggleSelectRow(idx,true)"
             @click.shift.exact="toggleSelectRow(idx,false,true)"
             style="width:2px;min-width:2px;"
-          :tabindex="((idx+1)*100)">{{idx + recOffset + 1}}</td>
-        <TD_Element v-for="col in columns" :key="col.colName"
+            :tabindex="((idx+1)*100)"
+          >{{idx + recOffset + 1}}</td>
+          <TD_Element
+            v-for="col in columns"
+            :key="col.colName"
             :class="{'grid-lines': flgGridLines, 'error': col.hasError}"
-            :tabindex=" ((idx+1) *100) + col.colIdx" 
+            :tabindex=" ((idx+1) *100) + col.colIdx"
             :hasFocus="hasFocus(idx,col.colIdx)"
             @focusEl="setFocus(idx,col.colIdx)"
             @keyup.shift.tab="handleBackTab(row,col,idx,$event)"
@@ -82,44 +153,44 @@
             :rowIdx="idx"
             :col="col"
             :ref="'data-element-' + idx + '-' + col.colName"
-            />
-      </tr>
-    </tbody>
-  </table>
-  <div id="ttPopUp" style="position:absolute;"></div>
-  <div v-if="flgDebug">
-    <div class="controls">
-      <input type="checkbox" v-model="flgShowPK" @click="togglePK"/><label>Show PK?</label>
+          />
+        </tr>
+      </tbody>
+    </table>
+    <div id="ttPopUp" style="position:absolute;"></div>
+    <div v-if="flgDebug">
+      <div class="controls">
+        <input type="checkbox" v-model="flgShowPK" @click="togglePK" />
+        <label>Show PK?</label>
+      </div>
+      <div class="controls">
+        <input type="checkbox" v-model="flgShowData" />
+        <label>Show Data</label>
+        <span v-if="flgShowData">
+          <input type="radio" v-model="debugData" value="showData" />data
+          <input type="radio" v-model="debugData" value="showFilteredData" />Filterd
+          <input type="radio" v-model="debugData" value="showUpdates" /> updates
+          <input type="radio" v-model="debugData" value="showNewrecs" /> new recs
+          <input type="radio" v-model="debugData" value="showDeletes" /> deletes
+          <input type="radio" v-model="debugData" value="showSelected" /> selected Rows
+        </span>
+      </div>
     </div>
-    <div class="controls">
-    <input type="checkbox" v-model="flgShowData"/><label>Show Data</label>  
-      <span v-if="flgShowData"> 
-        <input type="radio" v-model="debugData" value="showData"/>data 
-        <input type="radio" v-model="debugData" value="showFilteredData">Filterd
-        <input type="radio" v-model="debugData" value="showUpdates"/> updates
-        <input type="radio" v-model="debugData" value="showNewrecs"/> new recs
-        <input type="radio" v-model="debugData" value="showDeletes"/> deletes
-        <input type="radio" v-model="debugData" value="showSelected"/> selected Rows
-      </span>
-    </div>
+    <transition name="fade2">
+      <div v-if="flgShowData">
+        <transition name="fade2">
+          <pre v-if="debugData == 'showData'">{{data}}</pre>
+          <pre v-if="debugData == 'showFilteredData'">{{filteredData}}</pre>
+        </transition>
+        <transition name="fade2">
+          <pre v-if="debugData == 'showUpdates'">{{updates}}</pre>
+          <pre v-if="debugData == 'showNewrecs'">{{newrecs}}</pre>
+          <pre v-if="debugData == 'showDeletes'">{{deletes}}</pre>
+          <pre v-if="debugData == 'showSelected'">{{selectedRows}}</pre>
+        </transition>
+      </div>
+    </transition>
   </div>
-  <transition name="fade2">
-    <div v-if="flgShowData">
-
-      <transition name="fade2">
-      <pre v-if="debugData == 'showData'">{{data}}</pre>
-      <pre v-if="debugData == 'showFilteredData'">{{filteredData}}</pre>
-      </transition>
-      <transition name="fade2">
-      <pre v-if="debugData == 'showUpdates'">{{updates}}</pre>
-      <pre v-if="debugData == 'showNewrecs'">{{newrecs}}</pre>
-      <pre v-if="debugData == 'showDeletes'">{{deletes}}</pre>
-      <pre v-if="debugData == 'showSelected'">{{selectedRows}}</pre>
-      </transition>
-    </div>
-  </transition>
-
-</div>
 </template>
 <script>
 import TD_Element from "./components/TD_Element.vue";
@@ -180,7 +251,8 @@ export default {
       debugData: "showData",
       idxAdd: 0,
       focusRow: undefined,
-      focusCol: undefined
+      focusCol: undefined,
+      recLIMIT: 1000
     };
   },
   created() {
@@ -219,10 +291,23 @@ export default {
       return newVal;
     },
     dataURL(newVal) {
+      // this.initGrid();
+      console.log(newVal);
+    },
+    dataURL_Comp(){
       this.initGrid();
     }
   },
   computed: {
+    dataURL_Comp(){
+      let url = this.dataURL;
+      // if(this.numAllRecs >= this.recLIMIT){
+        if(this.filterKey && this.filterKey.length >= 2){
+        url += "&filterKey=" + this.filterKey;
+        }
+      // }
+      return url;
+    },
     filterKey_DB: {
       //De-bounced filterKey
       get() {
@@ -290,7 +375,7 @@ export default {
         keyLookup = null; // Testing performance difference
         heroes = heroes
           .slice()
-          .sort(this.compareValues(sortKey, order, keyLookup));
+          .sort(this.compareValues(sortKey, order, keyLookup, col));
       }
       //this.flgDirty = false;
       return heroes;
@@ -325,6 +410,9 @@ export default {
     numAllRows() {
       const numAll = Object.keys(this.filteredData).length;
       return numAll;
+    },
+    numAllRecs(){
+      return this.data.length;
     },
     lowerDispIdx() {
       return this.recOffset + 1;
@@ -392,15 +480,25 @@ export default {
       this.selectedRows = {};
     },
     // function for dynamic sorting
-    compareValues(key, order = 1, keyLookup) {
+    compareValues(key, order = 1, keyLookup, col) {
       return function(a, b) {
         if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
           // property doesn't exist on either object
           return 0;
         }
-
-        let varA = typeof a[key] === "string" ? a[key].toUpperCase() : a[key];
-        let varB = typeof b[key] === "string" ? b[key].toUpperCase() : b[key];
+        let varA, varB;
+        if (col.type === "string") {
+          varA = a[key].toUpperCase();
+          varB = b[key].toUpperCase();
+        } else if (col.type === "integer") {
+          varA = parseInt(a[key], 10);
+          varB = parseInt(b[key], 10);
+        } else {
+          varA = a[key];
+          varB = b[key];
+        }
+        // let varA = typeof a[key] === "string" ? a[key].toUpperCase() : a[key];
+        // let varB = typeof b[key] === "string" ? b[key].toUpperCase() : b[key];
         if (varA == null) varA = "ZZZZZZZZZ";
         if (varB == null) varB = "ZZZZZZZZZ";
         if (keyLookup) {
@@ -578,7 +676,7 @@ export default {
       this.deletes = {};
       this.updates = {};
       this.newrecs = {};
-      this.getGridData(this.dataURL, this.dataDef);
+      this.getGridData(this.dataURL_Comp, this.dataDef);
     },
     initDefaultRec() {
       if (Object.keys(this.defaultRec).size) return; //Already set

@@ -69,7 +69,7 @@
             <option value="10">10</option>
             <option value="50">50</option>
             <option value="100">100</option>
-            <option value="100">500</option>
+            <option value="500">500</option>
             <option value="-1">All</option>
           </select>
           <span class="disp-row-offset-adjustor">
@@ -86,7 +86,7 @@
           </span>
           <span
             class="disp-row-count-selector"
-          >{{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRows }}</span>
+          >{{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRecs }}</span>
         </div>
       </div>
     </div>
@@ -212,6 +212,7 @@ export default {
     colDefs: Array,
     dataURL: String,
     dataDef: Array,
+    readOnly: Boolean,
     pDispRows: Number,
     pDefaultRec: Object,
     urlSaveGrid: String,
@@ -235,10 +236,12 @@ export default {
       selectedRows: {},
       sortKey: "",
       numDispRows: this.pDispRows || 10,
+      numAllRecs: 0,                  // Total # of recs in the database
       xfocusRow: 0,
       flgDebug: 0,
       flgExportEnabled: false,
       flgLocalControls: true,
+      flgReadOnly: this.readOnly || false,
       flgShowData: false,
       flgShowPK: false,
       flgDirty: false,
@@ -411,9 +414,7 @@ export default {
       const numAll = Object.keys(this.filteredData).length;
       return numAll;
     },
-    numAllRecs(){
-      return this.data.length;
-    },
+ 
     lowerDispIdx() {
       return this.recOffset + 1;
     },
@@ -632,6 +633,12 @@ export default {
               ? response.data.items
               : response.data;
           vm.data = recs;
+          if(response.data && response.data.items){
+            //rsObj
+            vm.numAllRecs = response.data.numRows;
+          }else {
+            vm.numAllRecs = vm.data.length;
+          }
 
           // vm.i_gridData = JSON.parse(JSON.stringify(vm.data)); //Save a copy
           vm.i_gridData = vm.data.slice(0);

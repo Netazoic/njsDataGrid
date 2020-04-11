@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div id="njs-wrapper">
     <div id="asyncticator-mount" />
     <div id="div-controls-container">
       <div id="div-local-controls">
@@ -90,6 +90,7 @@
         </div>
       </div>
     </div>
+    <div id="table-wrapper">
     <table id="njs-grid">
       <thead class="table-header">
         <tr>
@@ -157,6 +158,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
     <div id="ttPopUp" style="position:absolute;"></div>
     <div v-if="flgDebug">
       <div class="controls">
@@ -235,8 +237,8 @@ export default {
       i_gridData: [], //Saved version of original grid data, for reset. //TODO only working at shallow-clone level
       selectedRows: {},
       sortKey: "",
-      numDispRows: this.pDispRows || 10,
-      numAllRecs: 0,                  // Total # of recs in the database
+      numDispRows: this.pDispRows || 100,
+      numAllRecs: 0, // Total # of recs in the database
       xfocusRow: 0,
       flgDebug: 0,
       flgExportEnabled: false,
@@ -266,6 +268,7 @@ export default {
   mounted() {
     const vm = this;
     document.addEventListener("ctrl-down", this.handleDownArrow);
+    this.setFixedHeader();
   },
   watch: {
     colDefs(newVal) {
@@ -297,17 +300,17 @@ export default {
       // this.initGrid();
       console.log(newVal);
     },
-    dataURL_Comp(){
+    dataURL_Comp() {
       this.initGrid();
     }
   },
   computed: {
-    dataURL_Comp(){
+    dataURL_Comp() {
       let url = this.dataURL;
       // if(this.numAllRecs >= this.recLIMIT){
-        if(this.filterKey && this.filterKey.length >= 2){
+      if (this.filterKey && this.filterKey.length >= 2) {
         url += "&filterKey=" + this.filterKey;
-        }
+      }
       // }
       return url;
     },
@@ -321,6 +324,7 @@ export default {
       }, 250)
     },
     columns() {
+      const vm = this;
       const cols = this.colDefs.filter(function(col, idx) {
         return col.hidden !== true && col.visible !== false;
       });
@@ -328,6 +332,9 @@ export default {
       for (let idx = 0; idx < cols.length; idx++) {
         cols[idx]["colIdx"] = idx;
       }
+      this.$nextTick(function() {
+        resize.init(vm, "table-header");
+      });
       return cols;
     },
     filteredData: function() {
@@ -414,7 +421,7 @@ export default {
       const numAll = Object.keys(this.filteredData).length;
       return numAll;
     },
- 
+
     lowerDispIdx() {
       return this.recOffset + 1;
     },
@@ -633,10 +640,10 @@ export default {
               ? response.data.items
               : response.data;
           vm.data = recs;
-          if(response.data && response.data.items){
+          if (response.data && response.data.items) {
             //rsObj
             vm.numAllRecs = response.data.numRows;
-          }else {
+          } else {
             vm.numAllRecs = vm.data.length;
           }
 
@@ -753,6 +760,12 @@ export default {
             alert(err);
           });
       }
+    },
+    setFixedHeader() {
+      document.getElementById("table-wrapper").addEventListener("scroll", function() {
+        var translate = "translate(0," + this.scrollTop + "px)";
+        this.querySelector("thead").style.transform = translate;
+      });
     },
 
     setFocus: function(rowIdx, colIdx) {

@@ -4,37 +4,38 @@
     <div id="div-controls-container">
       <div id="div-local-controls">
         <form v-if="flgLocalControls">
-          <button
-            class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
-            @click.prevent.stop="saveGrid"
-            type="button"
-            title="Save table"
-          >
-            <i class="material-icons" style="font-size: 16px; margin-right: 5px;">save</i>Save
-          </button>
-          <button
-            class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
-            @click.prevent.stop="addRow"
-            type="button"
-            title="Add Row"
-          >
-            <i class="material-icons" style="font-size: 16px; margin-right: 5px;">add</i>Add Row
-          </button>
-          <button
-            class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
-            @click.prevent.stop="deleteRows"
-            type="button"
-          >
-            <i class="material-icons" style="font-size: 16px; margin-right: 5px;">delete</i>Delete Row
-          </button>
-          <button
-            class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
-            @click.prevent.stop="resetGrid"
-            type="button"
-          >
-            <i class="material-icons" style="font-size: 16px; margin-right: 5px;">undo</i>Reset
-          </button>
-
+          <div id="div-edit-controls" v-if="!flgReadOnly">
+            <button
+              class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+              @click.prevent.stop="saveGrid"
+              type="button"
+              title="Save table"
+            >
+              <i class="material-icons" style="font-size: 16px; margin-right: 5px;">save</i>Save
+            </button>
+            <button
+              class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+              @click.prevent.stop="addRow"
+              type="button"
+              title="Add Row"
+            >
+              <i class="material-icons" style="font-size: 16px; margin-right: 5px;">add</i>Add Row
+            </button>
+            <button
+              class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+              @click.prevent.stop="deleteRows"
+              type="button"
+            >
+              <i class="material-icons" style="font-size: 16px; margin-right: 5px;">delete</i>Delete Row
+            </button>
+            <button
+              class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+              @click.prevent.stop="resetGrid"
+              type="button"
+            >
+              <i class="material-icons" style="font-size: 16px; margin-right: 5px;">undo</i>Reset
+            </button>
+          </div>  <!-- /#flgLocalControls -->
           <button
             @click.prevent.stop="toggleExcelMenu"
             title="Export grid data"

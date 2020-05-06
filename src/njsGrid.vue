@@ -35,7 +35,8 @@
             >
               <i class="material-icons" style="font-size: 16px; margin-right: 5px;">undo</i>Reset
             </button>
-          </div>  <!-- /#flgLocalControls -->
+          </div>
+          <!-- /#flgLocalControls -->
           <button
             @click.prevent.stop="toggleExcelMenu"
             title="Export grid data"
@@ -92,73 +93,73 @@
       </div>
     </div>
     <div id="table-wrapper">
-    <table id="njs-grid">
-      <thead class="table-header">
-        <tr>
-          <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;">row</th>
-          <th
-            v-for="col in columns"
-            :key="col.colName"
-            :data-column-name="col.colName"
-            @click.exact.stop.prevent="sortBy(col.colName)"
-            @mouseout="hideHelp"
-            :class="headerClasses(col.colName,col.headerClasses)"
-            :style="{'width': col.width, 'min-width': col.width}"
+      <table id="njs-grid">
+        <thead class="table-header">
+          <tr>
+            <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;">row</th>
+            <th
+              v-for="col in columns"
+              :key="col.colName"
+              :data-column-name="col.colName"
+              @click.exact.stop.prevent="sortBy(col.colName)"
+              @mouseout="hideHelp"
+              :class="headerClasses(col.colName,col.headerClasses)"
+              :style="{'width': col.width, 'min-width': col.width}"
+            >
+              {{ col.header | capitalize }}
+              <i
+                v-if="col.help"
+                class="fa fa-info-circle"
+                @click.stop="showHelp(col.help,$event)"
+              />
+              <span
+                class="arrow"
+                :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'"
+                @click.stop.prevent.exact="sortBy(col.colName)"
+              ></span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="table-body">
+          <tr
+            v-for="(row,idx) in dispData"
+            :key="row[pk]"
+            class="table-data"
+            :class="{'selected': selectedRows[idx]==true, 'grid-lines':flgGridLines}"
+            :ref="'tr-data-' + idx"
           >
-            {{ col.header | capitalize }}
-            <i
-              v-if="col.help"
-              class="fa fa-info-circle"
-              @click.stop="showHelp(col.help,$event)"
+            <td
+              @click.exact="toggleSelectRow(idx)"
+              @click.ctrl.exact="toggleSelectRow(idx,true)"
+              @click.shift.exact="toggleSelectRow(idx,false,true)"
+              style="width:2px;min-width:2px;"
+              :tabindex="((idx+1)*100)"
+            >{{idx + recOffset + 1}}</td>
+            <TD_Element
+              v-for="col in columns"
+              :key="col.colName"
+              :class="{'grid-lines': flgGridLines, 'error': col.hasError}"
+              :tabindex=" ((idx+1) *100) + col.colIdx"
+              :hasFocus="hasFocus(idx,col.colIdx)"
+              @focusEl="setFocus(idx,col.colIdx)"
+              @keyup.shift.tab="handleBackTab(row,col,idx,$event)"
+              @keyup.ctrl.down="handleDownArrow(row,col,idx)"
+              @backtab="handleBackTab(row,col,idx)"
+              @ctrldown="handleArrow('down')"
+              @ctrlup="handleArrow('up')"
+              @click.exact.stop="setFocus(idx,col.colIdx)"
+              @blur="clearFocus(idx)"
+              @update="noteUpdate(row,col,idx)"
+              @change="noteUpdate(row,col,idx)"
+              :row="row"
+              :field="col.colName"
+              :rowIdx="idx"
+              :col="col"
+              :ref="'data-element-' + idx + '-' + col.colName"
             />
-            <span
-              class="arrow"
-              :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'"
-              @click.stop.prevent.exact="sortBy(col.colName)"
-            ></span>
-          </th>
-        </tr>
-      </thead>
-      <tbody class="table-body">
-        <tr
-          v-for="(row,idx) in dispData"
-          :key="row[pk]"
-          class="table-data"
-          :class="{'selected': selectedRows[idx]==true, 'grid-lines':flgGridLines}"
-          :ref="'tr-data-' + idx"
-        >
-          <td
-            @click.exact="toggleSelectRow(idx)"
-            @click.ctrl.exact="toggleSelectRow(idx,true)"
-            @click.shift.exact="toggleSelectRow(idx,false,true)"
-            style="width:2px;min-width:2px;"
-            :tabindex="((idx+1)*100)"
-          >{{idx + recOffset + 1}}</td>
-          <TD_Element
-            v-for="col in columns"
-            :key="col.colName"
-            :class="{'grid-lines': flgGridLines, 'error': col.hasError}"
-            :tabindex=" ((idx+1) *100) + col.colIdx"
-            :hasFocus="hasFocus(idx,col.colIdx)"
-            @focusEl="setFocus(idx,col.colIdx)"
-            @keyup.shift.tab="handleBackTab(row,col,idx,$event)"
-            @keyup.ctrl.down="handleDownArrow(row,col,idx)"
-            @backtab="handleBackTab(row,col,idx)"
-            @ctrldown="handleArrow('down')"
-            @ctrlup="handleArrow('up')"
-            @click.exact.stop="setFocus(idx,col.colIdx)"
-            @blur="clearFocus(idx)"
-            @update="noteUpdate(row,col,idx)"
-            @change="noteUpdate(row,col,idx)"
-            :row="row"
-            :field="col.colName"
-            :rowIdx="idx"
-            :col="col"
-            :ref="'data-element-' + idx + '-' + col.colName"
-          />
-        </tr>
-      </tbody>
-    </table>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <div id="ttPopUp" style="position:absolute;"></div>
     <div v-if="flgDebug">
@@ -731,6 +732,11 @@ export default {
       dataGrid.updates = this.updates;
       dataGrid.deletes = this.deletes;
       dataGrid.newrecs = this.newrecs;
+      // validate grid before save
+      if (!this.validateGrid(dataGrid)) {
+        return false;
+      }
+
       //remove newrecs from updates collection
       for (let key in dataGrid.newrecs) {
         delete dataGrid.updates[key];
@@ -763,10 +769,12 @@ export default {
       }
     },
     setFixedHeader() {
-      document.getElementById("table-wrapper").addEventListener("scroll", function() {
-        var translate = "translate(0," + this.scrollTop + "px)";
-        this.querySelector("thead").style.transform = translate;
-      });
+      document
+        .getElementById("table-wrapper")
+        .addEventListener("scroll", function() {
+          var translate = "translate(0," + this.scrollTop + "px)";
+          this.querySelector("thead").style.transform = translate;
+        });
     },
 
     setFocus: function(rowIdx, colIdx) {
@@ -862,6 +870,33 @@ export default {
         } else Vue.set(this.selectedRows, idx, newVal);
       } else {
         Vue.set(this.selectedRows, idx, newVal);
+      }
+    },
+    validateGrid: function(dataGrid) {
+      // validate before save
+      const vm = this;
+      try {
+        let uniqueValsMap = {};
+        let combinedErrMap = [];
+        Object.keys(dataGrid.updates).forEach(function(k, idx) {
+          let rec = dataGrid.updates[k];
+          let recErrMap = util.validateRecord(
+            rec,
+            vm.colDefs,
+            vm.data,
+            uniqueValsMap
+          );
+          if (recErrMap) Array.prototype.push.apply(combinedErrMap, recErrMap);
+        });
+        if (combinedErrMap.length) {
+          const errMsg = combinedErrMap.join("\n");
+          alert(errMsg);
+          return false;
+        }
+        else return true;  // Validated successfully
+      } catch (err) {
+        alert(err);
+        return false;
       }
     },
     noteAdd: function(row, pk) {

@@ -1,7 +1,8 @@
 const util = {
     debounce: debounce,
     hideToolTip: hideToolTip,
-    showToolTip: showToolTip
+    showToolTip: showToolTip,
+    validateRecord: validateRecord
 }
 
 export default util;
@@ -13,9 +14,9 @@ export default util;
 // Taken from David Walsh blog who got it from underscore
 export function debounce(func, wait, immediate) {
     var timeout;
-    return function() {
+    return function () {
         var context = this, args = arguments;
-        var later = function() {
+        var later = function () {
             timeout = null;
             if (!immediate) func.apply(context, args);
         };
@@ -80,124 +81,126 @@ function showToolTip(msg, evt) {
     $div.show(200);
 }
 
-var validateRows = function(colDefs, mi, recs) {
-    var flgValid = true;
-    var alertMsg = "";
-    var errorCells = [];
-    var miKeys = Object.keys(mi);
-    if (!Object.keys(mi).length) return true; //No modified items, notthing to validate
-    var pkCol = colDefs.find(function(col, idx) {
-        return (col.pk == true);
-    });
-    var pkIdx = pkCol.colIdx;
-    // Limit validation to just updated rows
-    var pkIDs = [];
-    mi.each(function(rec, idx) {
-        pkIDs.push(rec[pkCol.colName]);
-    });
-    var $rows = $("div.dojoxGrid-master-view").find("table.dojoxGrid-row-table");
-    $rows = recs.filter(function(rec, idx) {
-        // Check if this row is in the mi collection
-        var atID = atIDs[idx];
-        return (atID in mi);
-    });
-    // convert collection of tables to collection of rows
-    var convRows = [];
-    $rows.each(function(idx, row) {
-        convRows[idx] = row.rows[0];
-    });
-    $rows = convRows;
-    //Make a field required
-    for (idx in colDefs) {
-        var col = colDefs[idx];
-        var header = col.name.replace(/<i.*<\/i>/, "");
-        var $cells = new Array();
-        var $allCells = $("td[idx=" + idx + "]");  // Used for unique pk checking
-        $rows.forEach(function(row, rdx) {
-            var cell = row.cells[idx];
-            cell = $(cell);
-            $cells.push(cell);
-        });
-        var cellVals = [], allCellVals = [];
-        $cells.forEach(function(cell, cdx) {
-            cellVals[cdx] = cell.text();
-            // cell.innerText || cell.textContent;
-        });
-        $allCells.each(function(rdx, cell) {
-            allCellVals[rdx] = cell.innerText || cell.textContent;
-        });
-        if (col.required) {
-            var emptyCells = $cells.filter(function(cell, idx) {
-                return cell.text() == '';
-            });
-            if (emptyCells.length) {
-                flgValid = false;
-                errorCells.push(...emptyCells);
-                alertMsg += ("Please set a value for " + header + "\n");
-            }
-        }
-        if (col.type == 'numeric') {
-            var min = col.min;
-            var max = col.max;
-            //			var $cells = $("td[idx=" + idx +"]");
-            //			var cellVals =[];
-            var overMax = [], underMin = [];
-            var nonNumbers = $cells.filter(function(cell, idx) {
-                return isNaN(cell.text());
-            });
-            if (nonNumbers.length) {
-                flgValid = false;
-                errorCells.push(...nonNumbers);
-                alertMsg += ("The value for  " + header + " must be a number.\n");
-            }
-            if (max) {
-                overMax = $cells.filter(function(cell, idx) {
-                    return cell.text() > max;
-                });
-            }
-            if (min != null) {
-                underMin = $cells.filter(function(cell, idx) {
-                    return cell.text() < min;
-                });
-            }
 
-            if (overMax.length) {
-                flgValid = false;
-                errorCells.push(...overMax);
-                alertMsg += ("The value for " + header + " can be a maximum of " + max + "\n");
-            }
-            if (underMin.length) {
-                flgValid = false;
-                errorCells.push(...underMin);
-                alertMsg += ("The value for " + header + " cannot be less than " + min + "\n");
-            }
-        }
-        if (col.unique) {
-            const dups = $allCells.filter((i, c) => {
-                //Find cells that have multiple matches in cellVals
-                const cellVal = c.textContent;
-                if (!cellVal || cellVal === '') return false;   //blanks are allowed in some unique value fields
-                return allCellVals.indexOf(cellVal) !== allCellVals.lastIndexOf(cellVal);
-            });
-            //console.info(Array.from(dups)) // using Array.from so it can be logged
-            if (dups.length) {
-                flgValid = false;
-                errorCells.push(...dups);
-                alertMsg += ("Please use unique values for " + header + "\n");
-            }
-        }
 
-    }
-    if (!flgValid) {
-        errorCells = $(errorCells);
-        errorCells.each(function(idx) {
-            $(this).addClass("error");
+function validateRecord(record, gridColumns, gridData, existingValsMap) {
+    if (isBlank(record)) return false;
+    let errMap = new Array();
+    let recValid = false;
+
+    let idxKeyField = Object.keys(gridColumns).find(k => {
+        let col = gridColumns[k];
+        return col.unique && col.required;
+    })
+    const colKeyField = gridColumns[idxKeyField];
+    const keyField = colKeyField.colName;
+    const keyFieldVal = record[keyField];
+    if (keyFieldVal == null || keyFieldVal === "") throw new ImportException("KeyField for row is blank ... skipping");
+    // recordID is not a true "PK", but a unique identifier for this record in the grid.
+    let recordID = keyFieldVal;
+
+    let idx = 0;
+    let intVal = null;
+    let gc;
+    let recVal;
+    try {
+        Object.keys(gridColumns).forEach(function (k, idx) {
+            gc = gridColumns[k];
+            recVal = record[gc.colName];
+            if(recVal!=null && recVal == "null") recVal = null;
+            // required
+            if (gc.required && (recVal == null || recVal == "")) {
+                errMap.push(recordID + ": " + gc.header + ":: "
+                    + " -- Required field missing.");
+                return;
+            }
+            if (gc.unique) {
+                if (recVal == null && gc.required) {
+                    errMap.push(recordID + ": " + gc.header + ":: " + recVal +
+                        " -- null value found for a required unique field");
+                }
+                else if (recVal != null) try {
+                    let isUnique = checkUnique(recVal, gc, gridData, existingValsMap);
+                    if (!isUnique) {
+                        if (gc.colName == colKeyField.colName) {
+                            errMap.push(recordID + ": " + gc.header + ":: " + recVal + " -- More than one grid row with same value for key field");
+                        }
+                        else errMap.push(recordID + ": " + gc.header + ":: " + recVal
+                            + " -- Non-unique value found for field with unique index");
+                    }
+
+                } catch (ex) {
+                    throw (ex);
+                }
+            }
+            if (gc.min != null || gc.max != null) {
+                try {
+                    intVal = new Number(recVal);
+                    if (gc.max != null && intVal > gc.max) {
+                        errMap.push(recordID + ": " + gc.header + ":: " + recVal + " -- Value exceeds max value: " + gc.max);
+                    }
+                    if (gc.min != null && intVal < gc.min) {
+                        errMap.push(recordID + ": " + gc.header + ":: " + recVal + " -- Value less than min value: " + gc.min);
+                    }
+                } catch (ex) {
+                    if (gc.required)
+                        errMap.push(recordID + ": " + gc.header + ":: " + recVal + " -- Non-numeric value found for required column with min/max");
+                }
+
+            }
         });
-        errorCells[0].focus();
-        var leftPos = $(errorCells[0]).scrollLeft();
-        alert(alertMsg);
+        if (errMap.length > 0) {
+            // old jQuery code still needs to be translated over
+            // if (!flgValid) {
+            //     errorCells = $(errorCells);
+            //     errorCells.each(function (idx) {
+            //         $(this).addClass("error");
+            //     });
+            //     errorCells[0].focus();
+            //     var leftPos = $(errorCells[0]).scrollLeft();
+            //     alert(alertMsg);
+            // }
+        }
+        // recValid = true;
+        return errMap;
+    } catch (ex) {
+        throw new Exception(ex);
     }
-    return flgValid;
 }
 
+function isBlank(record) {
+    let keys = Object.keys(record);
+    for (let idx = 0; idx < keys.length; idx++) {
+        let k = keys[idx]
+        if (record[k] != null && !record[k] !== ("")) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function checkUnique(recVal, gc, gridData, existingValsMap) {
+    // Check a value that should be unique against a runtime generated map of unique vals saved by column name
+    // This is used to make sure that unique values are not entered twice in the same grid
+    let flgUnique = true;
+    if (recVal == null) return true;  // Why are you wasting my time?
+    // Get the existing uniqueVals collection for this column if not already generated
+    if (!existingValsMap) throw new Error("Must define an existingValsMap to use as param 4");
+    let existingVals = existingValsMap[gc.colName];
+    if (!existingVals) {
+        existingVals = "";
+        Object.keys(gridData).forEach(function (k, idx) {
+            let val = gridData[k][gc.colName];
+            existingVals += ":" + val;
+        });
+        existingValsMap[gc.colName] = existingVals;
+
+    }
+    if (existingVals != null && existingVals.indexOf(recVal) >= 0) {
+        let idx1 = existingVals.indexOf(recVal);
+        let idx2 = existingVals.indexOf( recVal, idx1+1);
+        if (idx2 >= 0) flgUnique = false;
+    }
+    return flgUnique;
+}
 

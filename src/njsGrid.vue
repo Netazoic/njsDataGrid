@@ -370,25 +370,25 @@ export default {
         });
         heroes.unshift(newRec);
       });
-      if (sortKey) {
-        // heroes = heroes.slice().sort(function(a, b) {
-        //   a = a[sortKey];
-        //   b = b[sortKey];
-        //   return (a === b ? 0 : a > b ? 1 : -1) * order;
-        // });
-        const col = this.colDefs.find(function(el) {
-          return el.colName == sortKey;
-        });
-        if (col.type === "select") {
-          //ruh roh
-          keyLookup = col.options;
-        }
-        // DEBUG
-        keyLookup = null; // Testing performance difference
-        heroes = heroes
-          .slice()
-          .sort(this.compareValues(sortKey, order, keyLookup, col));
-      }
+      // if (sortKey) {
+      //   // heroes = heroes.slice().sort(function(a, b) {
+      //   //   a = a[sortKey];
+      //   //   b = b[sortKey];
+      //   //   return (a === b ? 0 : a > b ? 1 : -1) * order;
+      //   // });
+      //   const col = this.colDefs.find(function(el) {
+      //     return el.colName == sortKey;
+      //   });
+      //   if (col.type === "select") {
+      //     //ruh roh
+      //     keyLookup = col.options;
+      //   }
+      //   // DEBUG
+      //   keyLookup = null; // Testing performance difference
+      //   heroes = heroes
+      //     .slice()
+      //     .sort(this.compareValues(sortKey, order, keyLookup, col));
+      // }
       //this.flgDirty = false;
       return heroes;
     },
@@ -797,6 +797,22 @@ export default {
       util.showToolTip(helpText, evt);
       //alert(helpText);
     },
+    sortData(sortKey) {
+      let keyLookup;
+      const order = this.sortOrders[sortKey] || 1;
+      const col = this.colDefs.find(function(el) {
+        return el.colName == sortKey;
+      });
+      if (col.type === "select") {
+        //ruh roh
+        keyLookup = col.options;
+      }
+      // DEBUG
+      keyLookup = null; // Testing performance difference
+      this.data = this.data
+        .slice()
+        .sort(this.compareValues(sortKey, order, keyLookup, col));
+    },
     resetRecordOffset(idx) {
       this.recOffset = idx;
     },
@@ -818,6 +834,7 @@ export default {
       if (this.flgDebug > 3) {
         console.log(this.sortOrders);
       }
+      this.sortData(sortKey);
     },
     toggleDebug() {
       if (this.flgDebug) this.flgDebug--;
@@ -892,8 +909,7 @@ export default {
           const errMsg = combinedErrMap.join("\n");
           alert(errMsg);
           return false;
-        }
-        else return true;  // Validated successfully
+        } else return true; // Validated successfully
       } catch (err) {
         alert(err);
         return false;

@@ -1,53 +1,70 @@
 <template>
-<td @focus="onFocus($event)"  
-  @keyup.ctrl.up="onCtrlUp"
-  @keyup.ctrl.down="onCtrlDown"
-  @keyup.shift.tab="onBackTab"
-  :ref="refName+ '_td'">
-  <span v-if="flgDebug>=5">hasFocus: {{hasFocus}} {{rowIdx}} {{col.colIdx}}</span>
-    <cDateTime v-if="flgEdit && inputType=='timestamp'"
-        v-model="row[col.colName]"
-        @close="onBlur"
-        zone="UTC"
-        :ref="refName"
-        @change="$emit('change');"
-        @input="$emit('change');"
-        :tabindex="tabIndex"
-        class="data-element-input"
-        />
-    <input v-if="flgEdit && (inputType == 'text' || inputType == 'date')" 
-            :type="inputType"
-            v-model="row[col.colName]"
-            @change="$emit('change');"
-            @blur="onBlur"
-            :tabindex="tabIndex"
-            :ref="refName"
-            class="data-element-input"
-            />
- 
-    <select v-if="flgEdit && inputType == 'select'" 
-          v-model="row[col.colName]" 
-          @change="$emit('change')"
-          :tabIndex="tabIndex"
-          @blur="onBlur"
-          :ref="refName"
-          class="data-element-input"
-          >
-      <option value=null>-- select --</option>
+  <td
+    @focus="onFocus($event)"
+    @keyup.ctrl.up="onCtrlUp"
+    @keyup.ctrl.down="onCtrlDown"
+    @keyup.shift.tab="onBackTab"
+    :ref="refName+ '_td'"
+  >
+    <span v-if="flgDebug>=5">hasFocus: {{hasFocus}} {{rowIdx}} {{col.colIdx}}</span>
+    <cDateTime
+      v-if="flgEdit && inputType=='timestamp'"
+      v-model="row[col.colName]"
+      @close="onBlur"
+      zone="UTC"
+      :ref="refName"
+      @change="$emit('change');"
+      @input="$emit('change');"
+      :tabindex="tabIndex"
+      class="data-element-input"
+    />
+    <comboBox
+      v-if="flgEdit && inputType=='combo'"
+      :options="col.options"
+      :col="col"
+      v-model="row[col.colName]"
+      @change="$emit('change')"
+      @input="$emit('change')"
+      @close="onBlur"
+      :tabindex="tabIndex"
+      class="data-element-input"
+    />
+    <input
+      v-if="flgEdit && (inputType == 'text' || inputType == 'date')"
+      :type="inputType"
+      v-model="row[col.colName]"
+      @change="$emit('change');"
+      @blur="onBlur"
+      :tabindex="tabIndex"
+      :ref="refName"
+      class="data-element-input"
+    />
+
+    <select
+      v-if="flgEdit && inputType == 'select'"
+      v-model="row[col.colName]"
+      @change="$emit('change')"
+      :tabIndex="tabIndex"
+      @blur="onBlur"
+      :ref="refName"
+      class="data-element-input"
+    >
+      <option value="null">-- select --</option>
       <option v-for="(opt,idx) in col.options" :value="opt.value" :key="idx">{{opt.label}}</option>
     </select>
-    <span  v-if="!flgEdit">{{displayVal}}</span>
-</td>
+    <span v-if="!flgEdit">{{displayVal}}</span>
+  </td>
 </template>
 <script>
 import moment from "moment";
 import cDateTime from "./cDateTime.vue";
+import comboBox from "./comboBox.vue";
 const STD_INPUTS = "text|date";
 
 export default {
   name: "td-element",
   props: ["row", "col", "rowIdx", "hasFocus"],
-  components: { cDateTime },
+  components: { cDateTime, comboBox },
   data: function() {
     return {
       flgDebug: 0,
@@ -106,6 +123,9 @@ export default {
           break;
         case "select":
           type = "select";
+          break;
+        case "combo":
+          type = "combo";
           break;
         default:
           type = "text";

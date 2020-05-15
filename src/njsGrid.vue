@@ -340,11 +340,8 @@ export default {
       return cols;
     },
     filteredData: function() {
-      var sortKey = this.sortKey;
-      var keyLookup = null;
       var filterKey = this.filterKey && this.filterKey.toLowerCase();
       var flgDirty = this.flgDirty;
-      var order = this.sortOrders[sortKey] || 1;
       var heroes = this.data;
       if (filterKey) {
         heroes = heroes.filter(function(row) {
@@ -370,26 +367,6 @@ export default {
         });
         heroes.unshift(newRec);
       });
-      // if (sortKey) {
-      //   // heroes = heroes.slice().sort(function(a, b) {
-      //   //   a = a[sortKey];
-      //   //   b = b[sortKey];
-      //   //   return (a === b ? 0 : a > b ? 1 : -1) * order;
-      //   // });
-      //   const col = this.colDefs.find(function(el) {
-      //     return el.colName == sortKey;
-      //   });
-      //   if (col.type === "select") {
-      //     //ruh roh
-      //     keyLookup = col.options;
-      //   }
-      //   // DEBUG
-      //   keyLookup = null; // Testing performance difference
-      //   heroes = heroes
-      //     .slice()
-      //     .sort(this.compareValues(sortKey, order, keyLookup, col));
-      // }
-      //this.flgDirty = false;
       return heroes;
     },
 

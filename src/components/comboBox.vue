@@ -1,5 +1,5 @@
 <template>
-  <v-select :options="options" taggable :value="selected" @input="onChange" />
+  <v-select :options="options" taggable :value="selected" @input="onChange" :createOption="onCreate" />
 </template>
 <script>
 import vSelect from "vue-select";
@@ -17,13 +17,14 @@ export default {
     //   console.log(this.options);
   },
   methods: {
-    onChange(newVal) {
-      //newVal is an object
-      this.selected = newVal;
-      newVal = newVal.value;
-      if (this.flgDebug) {
-        // debugger;
-      }
+    onCreate(newVal){
+        this.selected = newVal;
+        this.$emit("input",newVal);
+    },
+    onChange(newSelection) {
+      //newVal is an object {label:foo, value:bar}
+      this.selected = newSelection;
+      let newVal = newSelection.value;
       this.$emit("input", newVal);
     }
   }

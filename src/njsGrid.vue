@@ -479,7 +479,9 @@ export default {
           varB = b[key].toUpperCase();
         } else if (col.type === "integer") {
           varA = parseInt(a[key], 10);
+          if (isNaN(varA)) varA = -999999;
           varB = parseInt(b[key], 10);
+          if (isNaN(varB)) varB = -999999;
         } else {
           varA = a[key];
           varB = b[key];
@@ -488,6 +490,7 @@ export default {
         // let varB = typeof b[key] === "string" ? b[key].toUpperCase() : b[key];
         if (varA == null) varA = "ZZZZZZZZZ";
         if (varB == null) varB = "ZZZZZZZZZ";
+
         if (keyLookup) {
           //Look up display values in an options list
           if (varA == "" || varB == "") {

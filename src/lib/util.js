@@ -14,9 +14,9 @@ export default util;
 // Taken from David Walsh blog who got it from underscore
 export function debounce(func, wait, immediate) {
     var timeout;
-    return function () {
+    return function() {
         var context = this, args = arguments;
-        var later = function () {
+        var later = function() {
             timeout = null;
             if (!immediate) func.apply(context, args);
         };
@@ -95,38 +95,38 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
     const colKeyField = gridColumns[idxKeyField];
     const keyField = colKeyField.colName;
     const keyFieldVal = record[keyField];
-    if (keyFieldVal == null || keyFieldVal === "") throw new ImportException("KeyField for row is blank ... skipping");
     // recordID is not a true "PK", but a unique identifier for this record in the grid.
     let recordID = keyFieldVal;
 
     let idx = 0;
     let intVal = null;
     let gc;
-    let recVal;
+    let recVal, colIdx;
     try {
-        Object.keys(gridColumns).forEach(function (k, idx) {
+        Object.keys(gridColumns).forEach(function(k, idx) {
             gc = gridColumns[k];
+            colIdx = idx;
             recVal = record[gc.colName];
-            if(recVal!=null && recVal == "null") recVal = null;
+            if (recVal != null && recVal == "null") recVal = null;
+            let errPrefix = recordID + ": " + colIdx + ": " + gc.colName + ": " + gc.colHeader + ":";
             // required
             if (gc.required && (recVal == null || recVal == "")) {
-                errMap.push(recordID + ": " + gc.header + ":: "
-                    + " -- Required field missing.");
+                errMap.push(errPrefix + recVal + ": Required field missing.");
                 return;
             }
+
             if (gc.unique) {
                 if (recVal == null && gc.required) {
-                    errMap.push(recordID + ": " + gc.header + ":: " + recVal +
-                        " -- null value found for a required unique field");
+                    errMap.push(errPrefix + recVal +
+                        ": null value found for a required unique field");
                 }
                 else if (recVal != null) try {
                     let isUnique = checkUnique(recVal, gc, gridData, existingValsMap);
                     if (!isUnique) {
                         if (gc.colName == colKeyField.colName) {
-                            errMap.push(recordID + ": " + gc.header + ":: " + recVal + " -- More than one grid row with same value for key field");
+                            errMap.push(errPrefix + recVal + ": More than one grid row with same value for key field");
                         }
-                        else errMap.push(recordID + ": " + gc.header + ":: " + recVal
-                            + " -- Non-unique value found for field with unique index");
+                        else errMap.push(errPrefix + recVal + ": Non-unique value found for field with unique index");
                     }
 
                 } catch (ex) {
@@ -137,30 +137,18 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
                 try {
                     intVal = new Number(recVal);
                     if (gc.max != null && intVal > gc.max) {
-                        errMap.push(recordID + ": " + gc.header + ":: " + recVal + " -- Value exceeds max value: " + gc.max);
+                        errMap.push(errPrefix + recVal + ": Value exceeds max value -- " + gc.max);
                     }
                     if (gc.min != null && intVal < gc.min) {
-                        errMap.push(recordID + ": " + gc.header + ":: " + recVal + " -- Value less than min value: " + gc.min);
+                        errMap.push(errPrefix + recVal + ": Value less than min value -- " + gc.min);
                     }
                 } catch (ex) {
                     if (gc.required)
-                        errMap.push(recordID + ": " + gc.header + ":: " + recVal + " -- Non-numeric value found for required column with min/max");
+                        errMap.push(errPrefix + recVal + ": Non-numeric value found for required column with min/max");
                 }
 
             }
         });
-        if (errMap.length > 0) {
-            // old jQuery code still needs to be translated over
-            // if (!flgValid) {
-            //     errorCells = $(errorCells);
-            //     errorCells.each(function (idx) {
-            //         $(this).addClass("error");
-            //     });
-            //     errorCells[0].focus();
-            //     var leftPos = $(errorCells[0]).scrollLeft();
-            //     alert(alertMsg);
-            // }
-        }
         // recValid = true;
         return errMap;
     } catch (ex) {
@@ -189,7 +177,7 @@ function checkUnique(recVal, gc, gridData, existingValsMap) {
     let existingVals = existingValsMap[gc.colName];
     if (!existingVals) {
         existingVals = "";
-        Object.keys(gridData).forEach(function (k, idx) {
+        Object.keys(gridData).forEach(function(k, idx) {
             let val = gridData[k][gc.colName];
             existingVals += ":" + val;
         });
@@ -198,7 +186,7 @@ function checkUnique(recVal, gc, gridData, existingValsMap) {
     }
     if (existingVals != null && existingVals.indexOf(recVal) >= 0) {
         let idx1 = existingVals.indexOf(recVal);
-        let idx2 = existingVals.indexOf( recVal, idx1+1);
+        let idx2 = existingVals.indexOf(recVal, idx1 + 1);
         if (idx2 >= 0) flgUnique = false;
     }
     return flgUnique;

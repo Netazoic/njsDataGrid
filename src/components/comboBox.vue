@@ -17,14 +17,15 @@ export default {
     //   console.log(this.options);
   },
   methods: {
-    onCreate(newVal){
-        this.selected = newVal;
-        this.$emit("input",newVal);
+    onCreate(newVal) {
+      this.selected = newVal;
+      this.$emit("input", newVal);
     },
     onChange(newSelection) {
       //newVal is an object {label:foo, value:bar}
       this.selected = newSelection;
-      let newVal = newSelection.value;
+
+      let newVal = newSelection ? newSelection.value : "";
       this.$emit("input", newVal);
     }
   }

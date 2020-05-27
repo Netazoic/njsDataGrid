@@ -5,6 +5,8 @@
     @keyup.ctrl.down="onCtrlDown"
     @keyup.shift.tab="onBackTab"
     :ref="refName+ '_td'"
+    :class="{error:flgError}"
+    :title="title"
   >
     <span v-if="flgDebug>=5">hasFocus: {{hasFocus}} {{rowIdx}} {{col.colIdx}}</span>
     <cDateTime
@@ -63,12 +65,13 @@ const STD_INPUTS = "text|date";
 
 export default {
   name: "td-element",
-  props: ["row", "col", "rowIdx", "hasFocus"],
+  props: ["row", "col", "rowIdx", "hasFocus", "error"],
   components: { cDateTime, comboBox },
   data: function() {
     return {
       flgDebug: 0,
       focusLevel: 0,
+      flgError: false,
       flgFocus: false
     };
   },
@@ -76,6 +79,14 @@ export default {
     // flgFocus(newVal) {
     //    console.log("flgFocus : " + this.col.colName + " : " + newVal);
     // },
+    error(newVal) {
+      const flg = newVal != null;
+      if (flg) {
+        this.flgError = true;
+      } else {
+        this.flgError = false;
+      }
+    },
     hasFocus(newVal) {
       let colName = this.col ? this.col.colName : "unknown";
       if (newVal) {
@@ -104,6 +115,10 @@ export default {
     },
     tabIndex() {
       return (this.rowIdx + 1) * 100 + this.col.colIdx;
+    },
+    title() {
+      let title = this.error ? this.error.errMsg : "";
+      return title;
     },
     colType() {
       return this.col.type || "text";
@@ -221,5 +236,8 @@ export default {
 <style scoped>
 .data-element-input {
   width: 95%;
+}
+.error {
+  border: 1px solid red !important;
 }
 </style>

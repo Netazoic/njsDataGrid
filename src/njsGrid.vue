@@ -141,6 +141,7 @@
               :class="{'grid-lines': flgGridLines, 'error': col.hasError}"
               :tabindex=" ((idx+1) *100) + col.colIdx"
               :hasFocus="hasFocus(idx,col.colIdx)"
+              :error="hasError(idx,col.colName, row[pk])"
               @focusEl="setFocus(idx,col.colIdx)"
               @keyup.shift.tab="handleBackTab(row,col,idx,$event)"
               @keyup.ctrl.down="handleDownArrow(row,col,idx)"
@@ -235,6 +236,7 @@ export default {
       updates: {},
       deletes: {},
       newrecs: {},
+      errors: [],
       defaultRec: this.pDefaultRec || {},
       i_gridData: [], //Saved version of original grid data, for reset. //TODO only working at shallow-clone level
       selectedRows: {},
@@ -648,6 +650,12 @@ export default {
       if (this.flgDebug >= 4)
         console.log("handleBackTab: focus on " + newColIdx);
     },
+    hasError: function(idx, colName, rowID) {
+      const err = this.errors.find(err => {
+        return err.rowID == rowID && err.colName == colName;
+      });
+      return err;
+    },
     hasFocus: function(idx, colIdx) {
       if (this.focusRow === idx && this.focusCol === colIdx) {
         return true;
@@ -713,9 +721,8 @@ export default {
       dataGrid.deletes = this.deletes;
       dataGrid.newrecs = this.newrecs;
       // validate grid before save
-      if (!this.validateGrid(dataGrid)) {
-        return false;
-      }
+      let gridErrors = this.validateGrid(dataGrid);
+      if (gridErrors.length !== 0) return false;
 
       //remove newrecs from updates collection
       for (let key in dataGrid.newrecs) {
@@ -883,12 +890,49 @@ export default {
             vm.data,
             uniqueValsMap
           );
-          if (recErrMap) Array.prototype.push.apply(combinedErrMap, recErrMap);
+          let errRec = { rowID: k, rowIdx: idx, errMap: recErrMap };
+          if (recErrMap) combinedErrMap.push(errRec);
         });
         if (combinedErrMap.length) {
-          const errMsg = combinedErrMap.join("\n");
+          // recreate the errors collection.
+          this.errors = [];
+          // Each error rec looks like { rowIdx, colIdx, errMsg}
+          for (let idx = 0; idx < combinedErrMap.length; idx++) {
+            let errRecM = combinedErrMap[idx];
+            let rowIdx = errRecM.rowIdx;
+            let rowID = errRecM.rowID;
+            let errMap = errRecM.errMap;
+            for (let j = 0; j < errMap.length; j++) {
+              let map = errMap[j];
+              map = map.split(":");
+              let errRec = {};
+              errRec.rowID = rowID;
+              errRec.rowIdx = rowIdx;
+              errRec.colIdx = map[1].trim() - 0;
+              errRec.errMsg = map[5].trim();
+              errRec.colName = map[2].trim();
+              this.errors.push(errRec);
+            }
+          }
+          // Sort the errors by row number
+          this.errors = this.errors.reverse();
+
+          let errMsg = "";
+          for (let idx = 0; idx < this.errors.length; idx++) {
+            let err = this.errors[idx];
+            // Find the grid row number in current grid data
+            let rowNum = vm.filteredData.findIndex((rec, idx) => {
+              return rec[vm.pk] == err.rowID;
+            });
+            rowNum = rowNum + 1; // zero-based
+            errMsg +=
+              "Row " + rowNum + ": " + err.colName + " - " + err.errMsg + "\n";
+          }
+          errMsg =
+            "Errors found while saving this grid. Please see highlighted cells.\r\n\r\n" +
+            errMsg;
           alert(errMsg);
-          return false;
+          return combinedErrMap;
         } else return true; // Validated successfully
       } catch (err) {
         alert(err);

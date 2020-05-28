@@ -92,6 +92,7 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
         let col = gridColumns[k];
         return col.unique && col.required;
     })
+    if(idxKeyField == undefined) throw new Error("Could not find PK for this grid. Check grid definition setup");
     const colKeyField = gridColumns[idxKeyField];
     const keyField = colKeyField.colName;
     const keyFieldVal = record[keyField];

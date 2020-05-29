@@ -149,11 +149,19 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
                 }
 
             }
+            if (gc.maxlen != null && recVal != null) {
+                let intLen = recVal.length;
+                if (gc.maxlen < intLen) {
+                    errMap.push(errPrefix + recVal
+                            + ": Value longer than maximum length for this column -- " + gc.maxlen);
+                }
+
+            }
         });
         // recValid = true;
         return errMap;
     } catch (ex) {
-        throw new Exception(ex);
+        throw new Error(ex);
     }
 }
 
@@ -192,4 +200,6 @@ function checkUnique(recVal, gc, gridData, existingValsMap) {
     }
     return flgUnique;
 }
+
+
 

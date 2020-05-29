@@ -890,8 +890,10 @@ export default {
             vm.data,
             uniqueValsMap
           );
-          let errRec = { rowID: k, rowIdx: idx, errMap: recErrMap };
-          if (recErrMap) combinedErrMap.push(errRec);
+          if (recErrMap.length) {
+            let errRec = { rowID: k, rowIdx: idx, errMap: recErrMap };
+            combinedErrMap.push(errRec);
+          }
         });
         if (combinedErrMap.length) {
           // recreate the errors collection.
@@ -932,8 +934,8 @@ export default {
             "Errors found while saving this grid. Please see highlighted cells.\r\n\r\n" +
             errMsg;
           alert(errMsg);
-          return combinedErrMap;
-        } else return true; // Validated successfully
+        }
+        return combinedErrMap;
       } catch (err) {
         alert(err);
         return false;

@@ -92,7 +92,7 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
         let col = gridColumns[k];
         return col.unique && col.required;
     })
-    if(idxKeyField == undefined) throw new Error("Could not find PK for this grid. Check grid definition setup");
+    if (idxKeyField == undefined) throw new Error("Could not find PK for this grid. Check grid definition setup");
     const colKeyField = gridColumns[idxKeyField];
     const keyField = colKeyField.colName;
     const keyFieldVal = record[keyField];
@@ -109,7 +109,7 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
             colIdx = idx;
             recVal = record[gc.colName];
             if (recVal != null && recVal == "null") recVal = null;
-            let errPrefix = recordID + ": " + colIdx + ": " + gc.colName + ": " + gc.colHeader + ":";
+            let errPrefix = recordID + ": " + colIdx + ": " + gc.colName + ": " + gc.header + ":";
             // required
             if (gc.required && (recVal == null || recVal == "")) {
                 errMap.push(errPrefix + recVal + ": Required field missing.");
@@ -134,6 +134,11 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
                     throw (ex);
                 }
             }
+            if (gc.type == 'numeric') {
+                if (recVal != null && isNaN(recVal)) {
+                    errMap.push(errPrefix + recVal + ": Value must be a number.");
+                }
+            }
             if (gc.min != null || gc.max != null) {
                 try {
                     intVal = new Number(recVal);
@@ -153,7 +158,7 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
                 let intLen = recVal.length;
                 if (gc.maxlen < intLen) {
                     errMap.push(errPrefix + recVal
-                            + ": Value longer than maximum length for this column -- " + gc.maxlen);
+                        + ": Value longer than maximum length for this column -- " + gc.maxlen);
                 }
 
             }

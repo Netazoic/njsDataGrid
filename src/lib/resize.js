@@ -64,8 +64,8 @@ export function tearDown(vm) {
         grip.removeEventListener("mousedown", onMouseDown);
         grip.removeEventListener("click", onClick);
     });
-    document.removeEventListener("mousemove", onMouseMove);
-    document.removeEventListener("mouseup", onMouseUp);
+    // document.removeEventListener("mousemove", onMouseMove);
+    // document.removeEventListener("mouseup", onMouseUp);
 }
 
 //  --------------------  End of exported functions
@@ -126,7 +126,7 @@ function onMouseUp(e) {
 
 function greaterThanMinWidth(colName, width) {
     //TODO
-    const minWidth = 2;
+    const minWidth = 1;
     if (width > minWidth) return true;
     else return false;
     // return width > minWidth;

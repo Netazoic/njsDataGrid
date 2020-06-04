@@ -24,6 +24,7 @@
       v-if="flgEdit && inputType=='combo'"
       :options="col.options"
       :col="col"
+      :ref="refName"
       v-model="row[col.colName]"
       @change="$emit('change')"
       @input="$emit('change')"
@@ -31,12 +32,21 @@
       :tabindex="tabIndex"
       class="data-element-input"
     />
+    <textarea
+      v-if="flgEdit && (inputType=='textarea' )"
+      :col="col"
+      :ref="refName"
+      v-model="row[col.colName]"
+      @change="$emit('change')"
+      @input="$emit('change')"
+      :tabindex="tabIndex"
+      class="data-element-input"></textarea>
+
     <input
-      v-if="flgEdit && (inputType == 'text' || inputType == 'date')"
+      v-if="flgEdit && ((inputType == 'text') || inputType == 'date')"
       :type="inputType"
       v-model="row[col.colName]"
       @change="$emit('change');"
-      @blur="onBlur"
       :tabindex="tabIndex"
       :ref="refName"
       class="data-element-input"
@@ -54,7 +64,7 @@
       <option value="null">-- select --</option>
       <option v-for="(opt,idx) in col.options" :value="opt.value" :key="idx">{{opt.label}}</option>
     </select>
-    <span v-if="!flgEdit">{{displayVal}}</span>
+    <span class="no-wrap" :style="styleObj" v-if="!flgEdit">{{displayVal}}</span>
   </td>
 </template>
 <script>
@@ -100,18 +110,30 @@ export default {
     }
   },
   computed: {
-    flgEdit() {
-      if (!this.flgFocus) return false;
-      let editable = this.col.editable;
-      let editor = false;
-      if ("editor" in this.col) {
-        editor = this.col.editor;
+    flgEdit: {
+      get: function() {
+        if (!this.flgFocus) return false;
+        let editable = this.col.editable;
+        let editor = false;
+        if ("editor" in this.col) {
+          editor = this.col.editor;
+        }
+        if (editable == null || editable == undefined) editable = true;
+        if (editor === false || (editor !== undefined && editor !== null))
+          editor = true;
+        let flgEdit = editable && editor;
+        return flgEdit;
+      },
+      set: function(newVal) {
+        return newVal;
       }
-      if (editable == null || editable == undefined) editable = true;
-      if (editor === false || (editor !== undefined && editor !== null))
-        editor = true;
-      let flgEdit = editable && editor;
-      return flgEdit;
+    },
+    styleObj() {
+      let colWidth = this.col.width || "100px";
+      if (colWidth == "0px") colWidth = "100px";
+      return {
+        width: colWidth
+      };
     },
     tabIndex() {
       return (this.rowIdx + 1) * 100 + this.col.colIdx;
@@ -146,6 +168,7 @@ export default {
           type = "text";
           break;
       }
+      if (type == "text" && this.col.maxLength > 40) type = "textarea";
       return type;
     },
     refName() {
@@ -218,6 +241,7 @@ export default {
     },
     onBackTab() {
       if (this.flgDebug >= 2) console.log("DataElement.handleBackTab");
+      this.flgEdit = false;
       this.flgFocus = false;
       this.$emit("backtab");
     },
@@ -239,5 +263,11 @@ export default {
 }
 .error {
   border: 1px solid red !important;
+}
+.no-wrap {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: inline-block;
 }
 </style>

@@ -66,7 +66,7 @@
         </form>
         <div id="div-filter-controls">
           <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search</span>
-          <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp" />
+          <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp" autocomplete="off" />
           <select class="num-rows-select" v-model="numDispRows">
             <option value="10">10</option>
             <option value="50">50</option>
@@ -88,7 +88,7 @@
           </span>
           <span
             class="disp-row-count-selector"
-          >{{lowerDispIdx}}-{{ upperDispIdx }} of {{ numAllRecs }}</span>
+          >{{lowerDispIdx}}-{{ upperDispIdx }} of {{ filteredData.length }}</span>
         </div>
       </div>
     </div>
@@ -101,7 +101,6 @@
               v-for="col in columns"
               :key="col.colName"
               :data-column-name="col.colName"
-              @click.exact.stop.prevent="sortBy(col.colName)"
               @mouseout="hideHelp"
               :class="headerClasses(col.colName,col.headerClasses)"
               :style="{'width': col.width, 'min-width': col.width}"
@@ -123,7 +122,7 @@
         <tbody class="table-body">
           <tr
             v-for="(row,idx) in dispData"
-            :key="row[pk]"
+            :key="idx"
             class="table-data"
             :class="{'selected': selectedRows[idx]==true, 'grid-lines':flgGridLines}"
             :ref="'tr-data-' + idx"
@@ -302,7 +301,7 @@ export default {
     },
     dataURL(newVal) {
       // this.initGrid();
-      console.log(newVal);
+      // console.log(newVal);
     },
     dataURL_Comp() {
       this.initGrid();
@@ -645,7 +644,7 @@ export default {
     handleBackTab: function(row, col, rowIdx, $event) {
       let newColIdx = col.colIdx - 1;
       if (newColIdx < 0) newColIdx = 0;
-      //Set focus to previous column
+      // //Set focus to previous column
       this.setFocus(rowIdx, newColIdx);
       if (this.flgDebug >= 4)
         console.log("handleBackTab: focus on " + newColIdx);

@@ -87,16 +87,24 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
     if (isBlank(record)) return false;
     let errMap = new Array();
     let recValid = false;
+    let idxPKField, idxKeyField;
 
-    let idxKeyField = Object.keys(gridColumns).find(k => {
+    idxPKField = Object.keys(gridColumns).find(k => {
         let col = gridColumns[k];
-        return col.unique && col.required;
-    })
-    if (idxKeyField == undefined) throw new Error("Could not find PK for this grid. Check grid definition setup");
-    const colKeyField = gridColumns[idxKeyField];
+        return col.pk;
+    });
+    if (idxPKField == undefined) {
+        idxKeyField = Object.keys(gridColumns).find(k => {
+            let col = gridColumns[k];
+            return col.unique && col.required;
+        });
+        idxPKField = idxKeyField;
+    }
+    if (idxPKField == undefined) throw new Error("Could not find PK for this grid. Check grid definition setup");
+    const colKeyField = gridColumns[idxPKField];
     const keyField = colKeyField.colName;
     const keyFieldVal = record[keyField];
-    // recordID is not a true "PK", but a unique identifier for this record in the grid.
+    // recordID may or may not be a true "PK", but a unique identifier for this record in the grid.
     let recordID = keyFieldVal;
 
     let idx = 0;

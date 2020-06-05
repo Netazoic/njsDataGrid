@@ -105,7 +105,9 @@
               :class="headerClasses(col.colName,col.headerClasses)"
               :style="{'width': col.width, 'min-width': col.width}"
             >
-              {{ col.header | capitalize }}
+              <span @click.stop.prevent.exact="sortBy(col.colName)">
+                {{ col.header | capitalize }}
+              </span>
               <i
                 v-if="col.help"
                 class="fa fa-info-circle"

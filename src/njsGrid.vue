@@ -746,7 +746,7 @@ export default {
             vm.deletes = {};
             vm.updates = {};
             vm.newrecs = {};
-            alert("Grid updates saved");
+            // alert("Grid updates saved");
             vm.$emit("saveGrid"); //For tracking flgDirty in parent container
           })
           .catch(function(err) {

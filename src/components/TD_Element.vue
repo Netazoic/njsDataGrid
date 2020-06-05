@@ -39,6 +39,7 @@
       v-model="row[col.colName]"
       @change="$emit('change')"
       @input="$emit('change')"
+      @mouseup="$emit('resize')"
       :tabindex="tabIndex"
       class="data-element-input"></textarea>
 

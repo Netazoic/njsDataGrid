@@ -10,7 +10,7 @@
   >
     <span v-if="flgDebug>=5">hasFocus: {{hasFocus}} {{rowIdx}} {{col.colIdx}}</span>
     <cDateTime
-      v-if="flgEdit && inputType=='timestamp'"
+      v-if="flgEdit && colEditor=='timestamp'"
       v-model="row[col.colName]"
       @close="onBlur"
       zone="UTC"
@@ -21,7 +21,7 @@
       class="data-element-input"
     />
     <comboBox
-      v-if="flgEdit && inputType=='combo'"
+      v-if="flgEdit && colEditor=='combo'"
       :options="col.options"
       :col="col"
       :ref="refName"
@@ -33,7 +33,7 @@
       class="data-element-input"
     />
     <textarea
-      v-if="flgEdit && (inputType=='textarea' )"
+      v-if="flgEdit && (colEditor =='textarea' )"
       :col="col"
       :ref="refName"
       v-model="row[col.colName]"
@@ -44,8 +44,8 @@
       class="data-element-input"></textarea>
 
     <input
-      v-if="flgEdit && ((inputType == 'text') || inputType == 'date')"
-      :type="inputType"
+      v-if="flgEdit && ((colEditor == 'text'))"
+      :type="colType"
       v-model="row[col.colName]"
       @change="$emit('change');"
       :tabindex="tabIndex"
@@ -54,7 +54,7 @@
     />
 
     <select
-      v-if="flgEdit && inputType == 'select'"
+      v-if="flgEdit && colEditor == 'select'"
       v-model="row[col.colName]"
       @change="$emit('change')"
       :tabIndex="tabIndex"
@@ -146,32 +146,15 @@ export default {
     colType() {
       return this.col.type || "text";
     },
-
-    inputType() {
-      var type;
-      switch (this.colType) {
-        case "text":
-          type = "text";
-          break;
-        case "timestamp":
-          type = "timestamp";
-          break;
-        case "date":
-          type = "date";
-          break;
-        case "select":
-          type = "select";
-          break;
-        case "combo":
-          type = "combo";
-          break;
-        default:
-          type = "text";
-          break;
+    colEditor() {
+      let editor = this.col.editor;
+      if (!editor) {
+        editor = "text";
       }
-      if (type == "text" && this.col.maxLength > 40) type = "textarea";
-      return type;
+      if (editor == "text" && this.col.maxLen > 40) editor = "textarea";
+      return editor;
     },
+
     refName() {
       return this.tabIndex + "_" + this.col.colName;
     },

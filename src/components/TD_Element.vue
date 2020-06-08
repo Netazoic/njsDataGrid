@@ -28,8 +28,9 @@
       v-model="row[col.colName]"
       @change="$emit('change')"
       @input="$emit('change')"
+      @blur="onBlur"
       @close="onBlur"
-      :tabindex="tabIndex"
+      :tabIndex="tabIndex"
       class="data-element-input"
     />
     <textarea
@@ -222,6 +223,9 @@ export default {
         this.focusMe();
       }
       this.$emit("focusEl");
+    },
+    onTab($evt) {
+      this.$emit("tab");
     },
     onBackTab() {
       if (this.flgDebug >= 2) console.log("DataElement.handleBackTab");

@@ -1,22 +1,34 @@
 <template>
-  <v-select :options="options" taggable :value="selected" @input="onChange" :createOption="onCreate" />
+  <v-select :options="opts" taggable :value="selected"
+    @search:blur="blurSearch" 
+    @input="onChange" ref="mySelect" :createOption="onCreate"
+    v-on:keyup.enter="showOptions"
+    :tabindex="tabIndex" />
 </template>
 <script>
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 
 export default {
-  props: ["options", "value", "col"],
+  props: ["options", "value", "col", "tabIndex"],
   components: { vSelect },
   data() {
     return {
+      opts: this.options || [],
       selected: this.value
     };
   },
   mounted() {
-    //   console.log(this.options);
+    // console.log(this.options);
+    this.$nextTick(function() {
+      this.$refs.mySelect.$refs.search.focus();
+    });
   },
+
   methods: {
+    blurSearch() {
+      // this.$emit("blur");
+    },
     onCreate(newVal) {
       this.selected = newVal;
       this.$emit("input", newVal);
@@ -27,6 +39,9 @@ export default {
 
       let newVal = newSelection ? newSelection.value : "";
       this.$emit("input", newVal);
+    },
+    showOptions() {
+      this.$refs.mySelect.$refs.search.focus();
     }
   }
 };

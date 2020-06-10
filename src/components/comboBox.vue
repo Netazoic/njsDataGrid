@@ -3,7 +3,7 @@
     @search:blur="blurSearch" 
     @input="onChange" ref="mySelect" :createOption="onCreate"
     v-on:keyup.enter="showOptions"
-    :tabindex="tabIndex" />
+    :tabindex="tabIndex + .1" />
 </template>
 <script>
 import vSelect from "vue-select";
@@ -21,7 +21,9 @@ export default {
   mounted() {
     // console.log(this.options);
     this.$nextTick(function() {
-      this.$refs.mySelect.$refs.search.focus();
+      const el = this.$refs.mySelect;
+      el.$refs.search.focus();
+      // el.open = false;
     });
   },
 

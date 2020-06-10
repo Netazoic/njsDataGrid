@@ -883,6 +883,7 @@ export default {
       try {
         let uniqueValsMap = {};
         let combinedErrMap = [];
+        this.errors = [];
         Object.keys(dataGrid.updates).forEach(function(k, idx) {
           let rec = dataGrid.updates[k];
           let recErrMap = util.validateRecord(
@@ -898,7 +899,6 @@ export default {
         });
         if (combinedErrMap.length) {
           // recreate the errors collection.
-          this.errors = [];
           // Each error rec looks like { rowIdx, colIdx, errMsg}
           for (let idx = 0; idx < combinedErrMap.length; idx++) {
             let errRecM = combinedErrMap[idx];

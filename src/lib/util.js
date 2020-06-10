@@ -162,11 +162,11 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
                 }
 
             }
-            if (gc.maxlen != null && recVal != null) {
+            if (gc.maxLen != null && gc.maxLen > 0 && recVal != null) {
                 let intLen = recVal.length;
-                if (gc.maxlen < intLen) {
+                if (gc.maxLen < intLen) {
                     errMap.push(errPrefix + recVal
-                        + ": Value longer than maximum length for this column -- " + gc.maxlen);
+                        + ": Value longer than maximum length for this column -- " + gc.maxLen);
                 }
 
             }

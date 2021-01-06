@@ -1003,7 +1003,7 @@ td.grid-lines {
 
 th,
 td {
-  min-width: 120px;
+  min-width: 20px;
   padding: 4px 8px;
 }
 

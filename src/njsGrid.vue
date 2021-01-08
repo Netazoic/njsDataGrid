@@ -106,13 +106,15 @@
               :style="{'width': col.width, 'min-width': col.width}"
             >
               <span @click.stop.prevent.exact="sortBy(col.colName)">
-                {{ col.header | capitalize }}
+                <span v-html="col.header"></span>
               </span>
-              <i
-                v-if="col.help"
-                class="fa fa-info-circle"
-                @click.stop="showHelp(col.help,$event)"
-              />
+              <span v-if="col.help">&nbsp;
+                <i
+                  v-if="col.help"
+                  class="fa fa-info-circle"
+                  @click.stop="showHelp(col.help,$event)"
+                />
+              </span>
               <span
                 class="arrow"
                 :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'"
@@ -884,8 +886,9 @@ export default {
         let uniqueValsMap = {};
         let combinedErrMap = [];
         this.errors = [];
-        Object.keys(dataGrid.updates).forEach(function(k, idx) {
-          let rec = dataGrid.updates[k];
+        const checkRecs = Object.assign(dataGrid.updates,dataGrid.newrecs);
+        Object.keys(checkRecs).forEach(function(k, idx) {
+          let rec = checkRecs[k];
           let recErrMap = util.validateRecord(
             rec,
             vm.colDefs,

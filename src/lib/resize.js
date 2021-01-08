@@ -93,10 +93,11 @@ function onMouseDown(e) {
     // if(!vm.body) vm.body = vm.$el.getElementsByClassName("table-body")[0];
     e.preventDefault();
     e.stopPropagation();
-    vm.thElm = e.target.parentNode;
+    const elm = e.target.parentNode;
+    vm.thElm = elm;
     vm.startOffset = vm.thElm.offsetWidth - e.pageX;
-    document.addEventListener("mousemove", onMouseMove.bind(vm));
-    document.addEventListener("mouseup", onMouseUp.bind(vm));
+    elm.addEventListener("mousemove", onMouseMove.bind(vm));
+    elm.addEventListener("mouseup", onMouseUp.bind(vm));
 }
 
 function onMouseMove(e) {
@@ -116,8 +117,9 @@ function onMouseUp(e) {
     const vm = this;
     e.preventDefault();
     e.stopPropagation();
-    document.removeEventListener("mousemove", onMouseMove);
-    document.removeEventListener("mouseup", onMouseUp);
+    const elm = e.target.parentNode;
+    elm.removeEventListener("mousemove", onMouseMove);
+    elm.removeEventListener("mouseup", onMouseUp);
     const widths = getColumnWidths(vm);
     localStorage.setItem(vm.resizeStorageKey, widths);
     vm.thElm = undefined;

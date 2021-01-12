@@ -11,7 +11,9 @@
               type="button"
               title="Save table"
             >
-              <i class="material-icons" style="font-size: 16px; margin-right: 5px;">save</i>Save
+              <i class="material-icons" 
+              :class="{'alert-el':flgDirty}"
+              style="font-size: 16px; margin-right: 5px;">save</i>Save
             </button>
             <button
               class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
@@ -28,14 +30,17 @@
             >
               <i class="material-icons" style="font-size: 16px; margin-right: 5px;">delete</i>Delete Row
             </button>
-            <button
+            <button v-if="flgReset"
               class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
               @click.prevent.stop="resetGrid"
               type="button"
             >
               <i class="material-icons" style="font-size: 16px; margin-right: 5px;">undo</i>Reset
             </button>
+            <!-- Custom buttons from the parent component go here -->
+            <slot name="other-buttons"></slot>
           </div>
+          
           <!-- /#flgLocalControls -->
           <button
             @click.prevent.stop="toggleExcelMenu"
@@ -251,6 +256,7 @@ export default {
       flgExportEnabled: false,
       flgLocalControls: true,
       flgReadOnly: this.readOnly || false,
+      flgReset: false,
       flgShowData: false,
       flgShowPK: false,
       flgDirty: false,
@@ -454,6 +460,7 @@ export default {
       // insert at top of stack
       this.data.unshift(rec);
       this.noteAdd(rec, pk);
+      this.flgDirty = true;
       //Select first element in the row
       const vm = this;
       this.$nextTick(() => {
@@ -519,14 +526,21 @@ export default {
     deleteRows() {
       //Clear negative selected rows
       let slctdCount = Object.keys(this.selectedRows).length;
+      if(slctdCount==0){
+        // push the current focusRow into selectedRows
+        // focusRow is the idx of the currentently focused row
+        Vue.set(this.selectedRows, this.focusRow, true);
+      }
       const vm = this;
-      Object.keys(this.selectedRows).forEach(function(key, idx) {
-        if (!vm.selectedRows[key]) {
-          delete vm.selectedRows[key];
-          slctdCount--;
-        }
-      });
+      if(slctdCount){
+        Object.keys(this.selectedRows).forEach(function(key, idx) {
+          if (!vm.selectedRows[key]) {
+            delete vm.selectedRows[key];
+            slctdCount--;
+          }
+        });
       if (slctdCount == 0) return;
+      }
       //const flg = confirm("Delete " + slctdCount + " selected rows?");
       const flg = true;
       if (!flg) return;
@@ -558,6 +572,7 @@ export default {
         }
       }
       this.$emit("noteDelete");
+      this.flgDirty = true;
     },
     diffData() {
       // Does not work -- only a shallow compare
@@ -711,6 +726,7 @@ export default {
       this.selectedRows = {};
       this.sortKey = "";
       this.sortOrders = {};
+      this.flgDirty = false;
       this.data = this.i_gridData.slice(0);
       this.$emit("reset");
     },
@@ -750,6 +766,7 @@ export default {
             vm.deletes = {};
             vm.updates = {};
             vm.newrecs = {};
+            vm.flgDirty = false;
             // alert("Grid updates saved");
             vm.$emit("saveGrid"); //For tracking flgDirty in parent container
           })
@@ -963,6 +980,7 @@ export default {
       const pk = row[this.pk];
       Vue.set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
       this.$emit("noteUpdate");
+      this.flgDirty = true;
     }
   },
   beforeDestroy() {
@@ -1047,6 +1065,10 @@ tr.selected td {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 4px solid #fff;
+}
+
+i.alert-el {
+  color: red;
 }
 
 /*Modal menu*/

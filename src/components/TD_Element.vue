@@ -66,7 +66,7 @@
       <option value="null">-- select --</option>
       <option v-for="(opt,idx) in col.options" :value="opt.value" :key="idx">{{opt.label}}</option>
     </select>
-    <span class="no-wrap" :style="styleObj" v-if="!flgEdit">{{displayVal}}</span>
+    <span class="no-wrap data-element-input" :style="styleObj" v-if="!flgEdit">{{displayVal}}</span>
   </td>
 </template>
 <script>
@@ -134,7 +134,8 @@ export default {
       let colWidth = this.col.width || "100px";
       if (colWidth == "0px") colWidth = "100px";
       return {
-        width: colWidth
+        width: colWidth,
+        display: "inline-block"
       };
     },
     tabIndex() {
@@ -248,6 +249,7 @@ export default {
 <style scoped>
 .data-element-input {
   width: 95%;
+  padding:4px 8px;
 }
 .error {
   border: 1px solid red !important;
@@ -256,6 +258,5 @@ export default {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  display: inline-block;
 }
 </style>

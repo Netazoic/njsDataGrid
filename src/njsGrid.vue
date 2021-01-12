@@ -1007,7 +1007,7 @@ td.grid-lines {
 th,
 td {
   min-width: 20px;
-  padding: 4px 8px;
+  /* padding: 4px 8px; */
 }
 
 th.active {

@@ -3,6 +3,7 @@
     @search:blur="blurSearch" 
     @input="onChange" ref="mySelect" :createOption="onCreate"
     v-on:keyup.enter="showOptions"
+    dense
     :tabindex="tabIndex + .1" />
 </template>
 <script>

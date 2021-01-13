@@ -42,6 +42,7 @@
       @input="$emit('change')"
       @mouseup="$emit('resize')"
       :tabindex="tabIndex"
+      :maxlength="col.maxLen"
       class="data-element-input"></textarea>
 
     <input
@@ -52,6 +53,7 @@
       :tabindex="tabIndex"
       :ref="refName"
       class="data-element-input"
+      :maxlength="col.maxLen"
     />
 
     <select

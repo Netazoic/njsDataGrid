@@ -119,9 +119,12 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
             if (recVal != null && recVal == "null") recVal = null;
             let errPrefix = recordID + ": " + colIdx + ": " + gc.colName + ": " + gc.header + ":";
             // required
-            if (gc.required && (recVal == null || recVal == "")) {
+            if(gc.required){
+                recVal = recVal.trim();
+                if ((recVal == null || recVal == "")) {
                 errMap.push(errPrefix + recVal + ": Required field missing.");
                 return;
+                }
             }
 
             if (gc.unique) {
@@ -201,14 +204,15 @@ function checkUnique(recVal, gc, gridData, existingValsMap) {
         existingVals = "";
         Object.keys(gridData).forEach(function(k, idx) {
             let val = gridData[k][gc.colName];
-            existingVals += ":" + val;
+            existingVals += ":" + val.toUpperCase();
         });
         existingValsMap[gc.colName] = existingVals;
 
     }
-    if (existingVals != null && existingVals.indexOf(recVal) >= 0) {
-        let idx1 = existingVals.indexOf(recVal);
-        let idx2 = existingVals.indexOf(recVal, idx1 + 1);
+    const checkVal = recVal.toUpperCase();
+    if (existingVals != null && existingVals.indexOf(checkVal) >= 0) {
+        let idx1 = existingVals.indexOf(checkVal);
+        let idx2 = existingVals.indexOf(checkVal, idx1 + 1);
         if (idx2 >= 0) flgUnique = false;
     }
     return flgUnique;

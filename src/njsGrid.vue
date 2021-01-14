@@ -107,6 +107,7 @@
               :key="col.colName"
               :data-column-name="col.colName"
               @mouseout="hideHelp"
+              class="njs-th"
               :class="headerClasses(col.colName,col.headerClasses)"
               :style="{'width': col.width, 'min-width': col.width}"
             >
@@ -563,6 +564,10 @@ export default {
         //Delete the record from filteredData
         key = key - 0; //convert key to a number
         this.filteredData.splice(key, 1);
+
+        // Delete the record from updates if included in that collections
+        delete this.updates[pk];
+
       }
       //Don't bother sending deletes for new records -- they aren't in the database anyway
       for (var pk in currentDeletes) {
@@ -1010,6 +1015,7 @@ th {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  padding: 4px 8px;
 }
 tr.grid-lines {
   border-bottom: 1px solid grey;

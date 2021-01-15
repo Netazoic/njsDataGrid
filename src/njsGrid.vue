@@ -6,41 +6,51 @@
         <form v-if="flgLocalControls">
           <div id="div-edit-controls" v-if="!flgReadOnly">
             <button
-              class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+              :class="btnClasses"
               @click.prevent.stop="saveGrid"
               type="button"
               title="Save table"
             >
-              <i class="material-icons" 
-              :class="{'alert-el':flgDirty}"
-              style="font-size: 16px; margin-right: 5px;">save</i>Save
+              <i
+                class="fa fa-save"
+                :class="{ 'alert-el': flgDirty }"
+              />Save
             </button>
             <button
-              class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+              :class="btnClasses"
               @click.prevent.stop="addRow"
               type="button"
               title="Add Row"
             >
-              <i class="material-icons" style="font-size: 16px; margin-right: 5px;">add</i>Add Row
+              <i
+                class="fa fa-plus"               
+              />Add Row
             </button>
             <button
-              class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+              :class="btnClasses"
               @click.prevent.stop="deleteRows"
               type="button"
+              title="Delete current row or selected rows"
             >
-              <i class="material-icons" style="font-size: 16px; margin-right: 5px;">delete</i>Delete Row
+              <i
+                class="fa fa-trash"
+              />Delete Row
             </button>
-            <button v-if="flgReset"
-              class="mdl-button mdl mdl-js-button mdl-button--primary mdl-button--raised"
+            <button
+              v-if="flgReset"
+              :class="btnClasses"
               @click.prevent.stop="resetGrid"
               type="button"
+              title="Revert current unsaved edits and deletes"
             >
-              <i class="material-icons" style="font-size: 16px; margin-right: 5px;">undo</i>Reset
+              <i
+                class="fa fa-redo"
+             />Reset
             </button>
             <!-- Custom buttons from the parent component go here -->
             <slot name="other-buttons"></slot>
           </div>
-          
+
           <!-- /#flgLocalControls -->
           <button
             @click.prevent.stop="toggleExcelMenu"
@@ -50,28 +60,43 @@
           >
             <i
               class="fa fas fa-file-excel"
-              :class="{disabled:!data.length}"
+              :class="{ disabled: !data.length }"
               title="export grid data as excel file"
-            >&nbsp;Export</i>
+              >&nbsp;Export</i
+            >
           </button>
-          <div id="menu-excel" :class="{hidden:!flgExcelMenu, visible:flgExcelMenu}" class="modal">
+          <div
+            id="menu-excel"
+            :class="{ hidden: !flgExcelMenu, visible: flgExcelMenu }"
+            class="modal"
+          >
             <div class="modal-content">
               <span class="close" @click="toggleExcelMenu">&times;</span>
-              <button @click.prevent.stop="exportExcelData(false,$event)">
-                <i class="fas fa-file-export" title="Export columns that are visible in the grid"></i>&nbsp; Filtered
+              <button @click.prevent.stop="exportExcelData(false, $event)">
+                <i
+                  class="fas fa-file-export"
+                  title="Export columns that are visible in the grid"
+                ></i
+                >&nbsp; Filtered
               </button>
               <button
-                @click.prevent.stop="exportExcelData(true,$event)"
+                @click.prevent.stop="exportExcelData(true, $event)"
                 title="export grid data as excel file"
               >
-                <i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL
+                <i class="fas fa-file-export" title="Export all data"></i>&nbsp;
+                ALL
               </button>
             </div>
           </div>
         </form>
         <div id="div-filter-controls">
           <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search</span>
-          <input name="query" v-model="filterKey_DB" @keydown.enter.prevent="nullOp" autocomplete="off" />
+          <input
+            name="query"
+            v-model="filterKey_DB"
+            @keydown.enter.prevent="nullOp"
+            autocomplete="off"
+          />
           <select class="num-rows-select" v-model="numDispRows">
             <option value="10">10</option>
             <option value="50">50</option>
@@ -82,18 +107,19 @@
           <span class="disp-row-offset-adjustor">
             <i
               class="fa fa-caret-left"
-              :class="{disabled: recOffset==0}"
+              :class="{ disabled: recOffset == 0 }"
               @click.stop.prevent="adjustRecordOffset(-1)"
             ></i>
             <i
               class="fa fa-caret-right"
-              :class="{disabled: upperDispIdx >= numAllRows}"
+              :class="{ disabled: upperDispIdx >= numAllRows }"
               @click.stop.prevent="adjustRecordOffset(1)"
             ></i>
           </span>
-          <span
-            class="disp-row-count-selector"
-          >{{lowerDispIdx}}-{{ upperDispIdx }} of {{ filteredData.length }}</span>
+          <span class="disp-row-count-selector"
+            >{{ lowerDispIdx }}-{{ upperDispIdx }} of
+            {{ filteredData.length }}</span
+          >
         </div>
       </div>
     </div>
@@ -101,24 +127,30 @@
       <table id="njs-grid">
         <thead class="table-header">
           <tr>
-            <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;">row</th>
+            <th
+              @click="toggleSelectAll"
+              style="width: 2px; min-width: 2px !important"
+            >
+              row
+            </th>
             <th
               v-for="col in columns"
               :key="col.colName"
               :data-column-name="col.colName"
               @mouseout="hideHelp"
               class="njs-th"
-              :class="headerClasses(col.colName,col.headerClasses)"
-              :style="{'width': col.width, 'min-width': col.width}"
+              :class="headerClasses(col.colName, col.headerClasses)"
+              :style="{ width: col.width, 'min-width': col.width }"
             >
               <span @click.stop.prevent.exact="sortBy(col.colName)">
                 <span v-html="col.header"></span>
               </span>
-              <span v-if="col.help">&nbsp;
+              <span v-if="col.help"
+                >&nbsp;
                 <i
                   v-if="col.help"
                   class="fa fa-info-circle"
-                  @click.stop="showHelp(col.help,$event)"
+                  @click.stop="showHelp(col.help, $event)"
                 />
               </span>
               <span
@@ -131,36 +163,41 @@
         </thead>
         <tbody class="table-body">
           <tr
-            v-for="(row,idx) in dispData"
+            v-for="(row, idx) in dispData"
             :key="idx"
             class="table-data"
-            :class="{'selected': selectedRows[idx]==true, 'grid-lines':flgGridLines}"
+            :class="{
+              selected: selectedRows[idx] == true,
+              'grid-lines': flgGridLines,
+            }"
             :ref="'tr-data-' + idx"
           >
             <td
               @click.exact="toggleSelectRow(idx)"
-              @click.ctrl.exact="toggleSelectRow(idx,true)"
-              @click.shift.exact="toggleSelectRow(idx,false,true)"
-              style="width:2px;min-width:2px;"
-              :tabindex="((idx+1)*100)"
-            >{{idx + recOffset + 1}}</td>
+              @click.ctrl.exact="toggleSelectRow(idx, true)"
+              @click.shift.exact="toggleSelectRow(idx, false, true)"
+              style="width: 2px; min-width: 2px"
+              :tabindex="(idx + 1) * 100"
+            >
+              {{ idx + recOffset + 1 }}
+            </td>
             <TD_Element
               v-for="col in columns"
               :key="col.colName"
-              :class="{'grid-lines': flgGridLines, 'error': col.hasError}"
-              :tabindex=" ((idx+1) *100) + col.colIdx"
-              :hasFocus="hasFocus(idx,col.colIdx)"
-              :error="hasError(idx,col.colName, row[pk])"
-              @focusEl="setFocus(idx,col.colIdx)"
-              @keyup.shift.tab="handleBackTab(row,col,idx,$event)"
-              @keyup.ctrl.down="handleDownArrow(row,col,idx)"
-              @backtab="handleBackTab(row,col,idx)"
+              :class="{ 'grid-lines': flgGridLines, error: col.hasError }"
+              :tabindex="(idx + 1) * 100 + col.colIdx"
+              :hasFocus="hasFocus(idx, col.colIdx)"
+              :error="hasError(idx, col.colName, row[pk])"
+              @focusEl="setFocus(idx, col.colIdx)"
+              @keyup.shift.tab="handleBackTab(row, col, idx, $event)"
+              @keyup.ctrl.down="handleDownArrow(row, col, idx)"
+              @backtab="handleBackTab(row, col, idx)"
               @ctrldown="handleArrow('down')"
               @ctrlup="handleArrow('up')"
-              @click.exact.stop="setFocus(idx,col.colIdx)"
+              @click.exact.stop="setFocus(idx, col.colIdx)"
               @blur="clearFocus(idx)"
-              @update="noteUpdate(row,col,idx)"
-              @change="noteUpdate(row,col,idx)"
+              @update="noteUpdate(row, col, idx)"
+              @change="noteUpdate(row, col, idx)"
               :row="row"
               :field="col.colName"
               :rowIdx="idx"
@@ -171,7 +208,7 @@
         </tbody>
       </table>
     </div>
-    <div id="ttPopUp" style="position:absolute;"></div>
+    <div id="ttPopUp" style="position: absolute"></div>
     <div v-if="flgDebug">
       <div class="controls">
         <input type="checkbox" v-model="flgShowPK" @click="togglePK" />
@@ -182,25 +219,31 @@
         <label>Show Data</label>
         <span v-if="flgShowData">
           <input type="radio" v-model="debugData" value="showData" />data
-          <input type="radio" v-model="debugData" value="showFilteredData" />Filterd
+          <input
+            type="radio"
+            v-model="debugData"
+            value="showFilteredData"
+          />Filterd
           <input type="radio" v-model="debugData" value="showUpdates" /> updates
-          <input type="radio" v-model="debugData" value="showNewrecs" /> new recs
+          <input type="radio" v-model="debugData" value="showNewrecs" /> new
+          recs
           <input type="radio" v-model="debugData" value="showDeletes" /> deletes
-          <input type="radio" v-model="debugData" value="showSelected" /> selected Rows
+          <input type="radio" v-model="debugData" value="showSelected" />
+          selected Rows
         </span>
       </div>
     </div>
     <transition name="fade2">
       <div v-if="flgShowData">
         <transition name="fade2">
-          <pre v-if="debugData == 'showData'">{{data}}</pre>
-          <pre v-if="debugData == 'showFilteredData'">{{filteredData}}</pre>
+          <pre v-if="debugData == 'showData'">{{ data }}</pre>
+          <pre v-if="debugData == 'showFilteredData'">{{ filteredData }}</pre>
         </transition>
         <transition name="fade2">
-          <pre v-if="debugData == 'showUpdates'">{{updates}}</pre>
-          <pre v-if="debugData == 'showNewrecs'">{{newrecs}}</pre>
-          <pre v-if="debugData == 'showDeletes'">{{deletes}}</pre>
-          <pre v-if="debugData == 'showSelected'">{{selectedRows}}</pre>
+          <pre v-if="debugData == 'showUpdates'">{{ updates }}</pre>
+          <pre v-if="debugData == 'showNewrecs'">{{ newrecs }}</pre>
+          <pre v-if="debugData == 'showDeletes'">{{ deletes }}</pre>
+          <pre v-if="debugData == 'showSelected'">{{ selectedRows }}</pre>
         </transition>
       </div>
     </transition>
@@ -216,6 +259,8 @@ import Vue from "vue";
 import moment, { min } from "moment";
 import util from "./lib/util";
 import * as resize from "./lib/resize";
+// Font Awesome
+import "@fortawesome/fontawesome-free/css/all.min.css";
 
 export default {
   name: "njsGrid",
@@ -230,14 +275,16 @@ export default {
     pDispRows: Number,
     pDefaultRec: Object,
     urlSaveGrid: String,
-    pSendOrigGridOnSave: String
+    pSendOrigGridOnSave: String,
+    flgReset: Boolean,
+    btnClasses: String,
   },
   components: {
-    TD_Element
+    TD_Element,
   },
-  data: function() {
+  data: function () {
     var sortOrders = {};
-    this.colDefs.forEach(function(col) {
+    this.colDefs.forEach(function (col) {
       sortOrders[col.colName] = 1;
     });
     return {
@@ -257,7 +304,6 @@ export default {
       flgExportEnabled: false,
       flgLocalControls: true,
       flgReadOnly: this.readOnly || false,
-      flgReset: false,
       flgShowData: false,
       flgShowPK: false,
       flgDirty: false,
@@ -271,7 +317,7 @@ export default {
       idxAdd: 0,
       focusRow: undefined,
       focusCol: undefined,
-      recLIMIT: 1000
+      recLIMIT: 1000,
     };
   },
   created() {
@@ -288,13 +334,13 @@ export default {
     colDefs(newVal) {
       if (!newVal || !newVal.length) return;
       const vm = this;
-      newVal.forEach(function(col) {
+      newVal.forEach(function (col) {
         vm.sortOrders[col.colName] = 1;
       });
       // set the column resize handles after a colDef change
       // need to wait for a nextTick to allow th elements to be mounted
 
-      this.$nextTick(function() {
+      this.$nextTick(function () {
         resize.init(vm, "table-header");
       });
     },
@@ -316,7 +362,7 @@ export default {
     },
     dataURL_Comp() {
       this.initGrid();
-    }
+    },
   },
   computed: {
     dataURL_Comp() {
@@ -333,45 +379,41 @@ export default {
       get() {
         return this.filterKey;
       },
-      set: util.debounce(function(newVal) {
+      set: util.debounce(function (newVal) {
         this.filterKey = newVal;
-      }, 250)
+      }, 250),
     },
     columns() {
       const vm = this;
-      const cols = this.colDefs.filter(function(col, idx) {
+      const cols = this.colDefs.filter(function (col, idx) {
         return col.hidden !== true && col.visible !== false;
       });
       //Make sure we have column idxs
       for (let idx = 0; idx < cols.length; idx++) {
         cols[idx]["colIdx"] = idx;
       }
-      this.$nextTick(function() {
+      this.$nextTick(function () {
         resize.init(vm, "table-header");
       });
       return cols;
     },
-    filteredData: function() {
+    filteredData: function () {
       var filterKey = this.filterKey && this.filterKey.toLowerCase();
       var flgDirty = this.flgDirty;
       var heroes = this.data;
       if (filterKey) {
-        heroes = heroes.filter(function(row) {
-          return Object.keys(row).some(function(key) {
-            return (
-              String(row[key])
-                .toLowerCase()
-                .indexOf(filterKey) > -1
-            );
+        heroes = heroes.filter(function (row) {
+          return Object.keys(row).some(function (key) {
+            return String(row[key]).toLowerCase().indexOf(filterKey) > -1;
           });
         });
       }
       // Add in any 'new' records, clearing any already in the heroes collection
       // so we don't get a pk violation.  This keeps new records at the top of the editor.
       const vm = this;
-      Object.keys(this.newrecs).forEach(function(recIdx, idx) {
+      Object.keys(this.newrecs).forEach(function (recIdx, idx) {
         const newRec = vm.newrecs[recIdx];
-        const foundRec = heroes.find(function(rec, idx) {
+        const foundRec = heroes.find(function (rec, idx) {
           if (rec.pk === newRec.pk) {
             heroes.splice(idx, 1); // Clear the rec from heroes
             return true;
@@ -402,7 +444,7 @@ export default {
     },
 
     pk() {
-      const col = this.colDefs.find(function(el) {
+      const col = this.colDefs.find(function (el) {
         return el.pk;
       });
       if (col) return col.colName;
@@ -426,31 +468,31 @@ export default {
       }
       if (upper > this.numAllRows) upper = this.numAllRows;
       return upper;
-    }
+    },
   },
   filters: {
-    capitalize: function(str) {
+    capitalize: function (str) {
       try {
         if (str == null) return null;
         return str.charAt(0).toUpperCase() + str.slice(1);
       } catch (err) {
         // column has no value for header
       }
-    }
+    },
   },
   methods: {
-    nullOp: function(evt) {
+    nullOp: function (evt) {
       // console.log(evt);
       //nada
     },
-    addRow: function() {
+    addRow: function () {
       this.clearFocus();
       this.clearSelected();
       let rec = Object.assign({}, this.defaultRec);
       let pk;
 
       const colDefs = this.colDefs;
-      const pkCol = colDefs.find(function(col) {
+      const pkCol = colDefs.find(function (col) {
         return col.pk === true;
       });
       if (pkCol) {
@@ -471,17 +513,17 @@ export default {
       });
     },
 
-    clearFocus: function(idx) {
+    clearFocus: function (idx) {
       this.focusRow = undefined;
       this.focusColumn = undefined;
     },
 
-    clearSelected: function() {
+    clearSelected: function () {
       this.selectedRows = {};
     },
     // function for dynamic sorting
     compareValues(key, order = 1, keyLookup, col) {
-      return function(a, b) {
+      return function (a, b) {
         if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
           // property doesn't exist on either object
           return 0;
@@ -509,10 +551,10 @@ export default {
           if (varA == "" || varB == "") {
             //Don't work so hard
           } else {
-            const optA = keyLookup.find(function(opt) {
+            const optA = keyLookup.find(function (opt) {
               return opt.value == varA;
             });
-            const optB = keyLookup.find(function(opt) {
+            const optB = keyLookup.find(function (opt) {
               return opt.value == varB;
             });
             varA = optA ? optA.label : varA;
@@ -527,20 +569,20 @@ export default {
     deleteRows() {
       //Clear negative selected rows
       let slctdCount = Object.keys(this.selectedRows).length;
-      if(slctdCount==0){
+      if (slctdCount == 0) {
         // push the current focusRow into selectedRows
         // focusRow is the idx of the currentently focused row
         Vue.set(this.selectedRows, this.focusRow, true);
       }
       const vm = this;
-      if(slctdCount){
-        Object.keys(this.selectedRows).forEach(function(key, idx) {
+      if (slctdCount) {
+        Object.keys(this.selectedRows).forEach(function (key, idx) {
           if (!vm.selectedRows[key]) {
             delete vm.selectedRows[key];
             slctdCount--;
           }
         });
-      if (slctdCount == 0) return;
+        if (slctdCount == 0) return;
       }
       //const flg = confirm("Delete " + slctdCount + " selected rows?");
       const flg = true;
@@ -567,7 +609,6 @@ export default {
 
         // Delete the record from updates if included in that collections
         delete this.updates[pk];
-
       }
       //Don't bother sending deletes for new records -- they aren't in the database anyway
       for (var pk in currentDeletes) {
@@ -581,10 +622,10 @@ export default {
     },
     diffData() {
       // Does not work -- only a shallow compare
-      let intersection = this.data.filter(x => {
+      let intersection = this.data.filter((x) => {
         this.i_gridData.includes(x);
       });
-      let difference = this.data.filter(x => !this.i_gridData.includes(x));
+      let difference = this.data.filter((x) => !this.i_gridData.includes(x));
       return difference;
     },
     exportExcelData(flgAll) {
@@ -641,7 +682,7 @@ export default {
         if (gridDataURL == null) return; // throw new Error("No data url specified");
         const vm = this;
 
-        this.$http.get(gridDataURL).then(response => {
+        this.$http.get(gridDataURL).then((response) => {
           var recs =
             response.data && response.data.items
               ? response.data.items
@@ -659,13 +700,13 @@ export default {
         });
       }
     },
-    handleArrow: function(direction) {
+    handleArrow: function (direction) {
       let focusRow = this.focusRow;
       if (direction == "down") focusRow++;
       else focusRow--;
       this.setFocus(focusRow, this.focusCol);
     },
-    handleBackTab: function(row, col, rowIdx, $event) {
+    handleBackTab: function (row, col, rowIdx, $event) {
       let newColIdx = col.colIdx - 1;
       if (newColIdx < 0) newColIdx = 0;
       // //Set focus to previous column
@@ -673,13 +714,13 @@ export default {
       if (this.flgDebug >= 4)
         console.log("handleBackTab: focus on " + newColIdx);
     },
-    hasError: function(idx, colName, rowID) {
-      const err = this.errors.find(err => {
+    hasError: function (idx, colName, rowID) {
+      const err = this.errors.find((err) => {
         return err.rowID == rowID && err.colName == colName;
       });
       return err;
     },
-    hasFocus: function(idx, colIdx) {
+    hasFocus: function (idx, colIdx) {
       if (this.focusRow === idx && this.focusCol === colIdx) {
         return true;
       } else return false;
@@ -760,13 +801,13 @@ export default {
       } else {
         var fd = new FormData();
         fd.append("dataGrid", JSON.stringify(dataGrid));
-        var fLoad = function(ret) {
+        var fLoad = function (ret) {
           // nada
         };
         var fErr = null;
         const vm = this;
         as.xhrSubmit(fd, url, fLoad, fErr)
-          .then(function(ret) {
+          .then(function (ret) {
             // Clear the collections on a successful save
             vm.deletes = {};
             vm.updates = {};
@@ -775,7 +816,7 @@ export default {
             // alert("Grid updates saved");
             vm.$emit("saveGrid"); //For tracking flgDirty in parent container
           })
-          .catch(function(err) {
+          .catch(function (err) {
             alert(err);
           });
       }
@@ -783,13 +824,13 @@ export default {
     setFixedHeader() {
       document
         .getElementById("table-wrapper")
-        .addEventListener("scroll", function() {
+        .addEventListener("scroll", function () {
           var translate = "translate(0," + this.scrollTop + "px)";
           this.querySelector("thead").style.transform = translate;
         });
     },
 
-    setFocus: function(rowIdx, colIdx) {
+    setFocus: function (rowIdx, colIdx) {
       if (this.xfocusRow != rowIdx) {
         this.clearFocus();
       }
@@ -812,7 +853,7 @@ export default {
     sortData(sortKey) {
       let keyLookup;
       const order = this.sortOrders[sortKey] || 1;
-      const col = this.colDefs.find(function(el) {
+      const col = this.colDefs.find(function (el) {
         return el.colName == sortKey;
       });
       if (col.type === "select") {
@@ -828,13 +869,13 @@ export default {
     resetRecordOffset(idx) {
       this.recOffset = idx;
     },
-    adjustRecordOffset: function(direction) {
+    adjustRecordOffset: function (direction) {
       // direction is 1 or -1
       let offset = this.recOffset + this.numDispRows * direction;
       offset = offset < 0 ? 0 : offset;
       this.recOffset = offset;
     },
-    sortBy: function(key) {
+    sortBy: function (key) {
       this.clearFocus();
       this.sortKey = key;
       var sortKey = key;
@@ -857,7 +898,7 @@ export default {
     },
     togglePK() {
       // this.flgShowPK = !this.flgShowPK;  -- controlled by v-model
-      const pkCol = this.colDefs.find(function(col, idx) {
+      const pkCol = this.colDefs.find(function (col, idx) {
         return col.pk == true;
       });
       pkCol.hidden = this.flgShowPK;
@@ -869,7 +910,7 @@ export default {
         return false;
       } else {
         const vm = this;
-        this.filteredData.forEach(function(el, idx) {
+        this.filteredData.forEach(function (el, idx) {
           Vue.set(vm.selectedRows, idx, true);
         });
         return true;
@@ -901,15 +942,15 @@ export default {
         Vue.set(this.selectedRows, idx, newVal);
       }
     },
-    validateGrid: function(dataGrid) {
+    validateGrid: function (dataGrid) {
       // validate before save
       const vm = this;
       try {
         let uniqueValsMap = {};
         let combinedErrMap = [];
         this.errors = [];
-        const checkRecs = Object.assign(dataGrid.updates,dataGrid.newrecs);
-        Object.keys(checkRecs).forEach(function(k, idx) {
+        const checkRecs = Object.assign(dataGrid.updates, dataGrid.newrecs);
+        Object.keys(checkRecs).forEach(function (k, idx) {
           let rec = checkRecs[k];
           let recErrMap = util.validateRecord(
             rec,
@@ -967,14 +1008,14 @@ export default {
         return false;
       }
     },
-    noteAdd: function(row, pk) {
+    noteAdd: function (row, pk) {
       if (!pk) {
         Vue.set(this.newrecs, this.idxAdd, row);
         this.idxAdd++;
       } else Vue.set(this.newrecs, pk, row);
       this.$emit("noteAdd");
     },
-    noteUpdate: function(row, col, idx) {
+    noteUpdate: function (row, col, idx) {
       if (this.flgDebug >= 3) {
         console.log("updated: " + idx + ": " + col.colName);
       }
@@ -986,12 +1027,12 @@ export default {
       Vue.set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
       this.$emit("noteUpdate");
       this.flgDirty = true;
-    }
+    },
   },
   beforeDestroy() {
     const vm = this;
     resize.tearDown(vm);
-  }
+  },
 };
 </script>
 
@@ -1160,5 +1201,10 @@ div#div-filter-controls {
 }
 div#div-local-controls button {
   margin: 0 5px;
+}
+
+button > i {
+  font-size: 16px;
+  margin-right: 5px;
 }
 </style>

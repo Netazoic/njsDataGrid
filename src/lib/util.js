@@ -203,6 +203,7 @@ function checkUnique(recVal, gc, gridData, existingValsMap) {
         existingVals = "";
         Object.keys(gridData).forEach(function(k, idx) {
             let val = gridData[k][gc.colName];
+            if(!val) return;
             existingVals += ":" + val.toUpperCase();
         });
         existingValsMap[gc.colName] = existingVals;

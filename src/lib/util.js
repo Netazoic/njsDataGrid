@@ -131,13 +131,13 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
                     errMap.push(errPrefix + recVal +
                         ": null value found for a required unique field");
                 }
-                else if (recVal != null) try {
+                else if (recVal != null  && recVal != '') try {
                     let isUnique = checkUnique(recVal, gc, gridData, existingValsMap);
                     if (!isUnique) {
                         if (gc.colName == colKeyField.colName) {
                             errMap.push(errPrefix + recVal + ": More than one grid row with same value for key field");
                         }
-                        else errMap.push(errPrefix + recVal + ": Non-unique value found for field with unique index");
+                        else errMap.push(errPrefix + recVal + ": Non-unique value found for a column that must have unique values");
                     }
 
                 } catch (ex) {

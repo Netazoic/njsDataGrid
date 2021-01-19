@@ -1122,6 +1122,13 @@ i.alert-el {
   color: red;
 }
 
+.required > .arrow.asc {
+  border-bottom: 4px solid rgba(255,255,255,0.78);  
+}
+
+.required > .arrow.dsc {
+  border-bottom: 4px solid rgba(255,255,255,1);  
+}
 /*Modal menu*/
 /* The Modal (background) */
 .modal {

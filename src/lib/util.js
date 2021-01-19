@@ -120,7 +120,13 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
             let errPrefix = recordID + ": " + colIdx + ": " + gc.colName + ": " + gc.header + ":";
             // required
             if(gc.required){
-                if ((recVal == null || recVal.trim() == "")) {
+                try{
+                    if(recVal!=null) recVal = recVal.trim();
+                    if(recVal=="") recVal = null;
+                }catch(err){
+                    // nada
+                }
+                if ((recVal == null)) {
                 errMap.push(errPrefix + recVal + ": Required field missing.");
                 return;
                 }

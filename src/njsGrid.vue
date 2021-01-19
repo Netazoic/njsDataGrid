@@ -777,6 +777,7 @@ export default {
       this.$emit("reset");
     },
     saveGrid() {
+      if(!this.flgDirty) return false;
       var url = this.urlSaveGrid;
       //const diff = this.diffData();
       var dataGrid = {};
@@ -814,7 +815,10 @@ export default {
             vm.newrecs = {};
             vm.flgDirty = false;
             // alert("Grid updates saved");
-            vm.$emit("saveGrid"); //For tracking flgDirty in parent container
+            vm.$nextTick(function () {
+              vm.$emit("saveGrid"); //For tracking flgDirty in parent container
+            });
+            
           })
           .catch(function (err) {
             alert(err);

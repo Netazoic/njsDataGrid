@@ -49,3 +49,10 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+
+ul.vs__dropdown-menu{
+  z-index:999999;
+}
+  </style

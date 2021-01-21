@@ -173,13 +173,21 @@
             :ref="'tr-data-' + idx"
           >
             <td
-              @click.exact="toggleSelectRow(idx)"
-              @click.ctrl.exact="toggleSelectRow(idx, true)"
-              @click.shift.exact="toggleSelectRow(idx, false, true)"
+  
               style="width: 2px; min-width: 2px"
               :tabindex="(idx + 1) * 100"
             >
+            <input type="radio" 
+                :id="'active-' + idx"
+                @click.exact.stop="toggleActive(row,idx)"
+                @click.exact="toggleSelectRow(idx,true)"
+                @click.ctrl.exact="toggleSelectRow(idx, true)"
+                @click.shift.exact="toggleSelectRow(idx, false, true)"
+                value=true
+                v-model="actives[idx]"
+             />
               {{ idx + recOffset + 1 }}
+
             </td>
             <TD_Element
               v-for="col in columns"
@@ -230,6 +238,7 @@
           <input type="radio" v-model="debugData" value="showDeletes" /> deletes
           <input type="radio" v-model="debugData" value="showSelected" />
           selected Rows
+          <input type="radio" v-model="debugData" value="showActives" /> Actives
         </span>
       </div>
     </div>
@@ -244,6 +253,7 @@
           <pre v-if="debugData == 'showNewrecs'">{{ newrecs }}</pre>
           <pre v-if="debugData == 'showDeletes'">{{ deletes }}</pre>
           <pre v-if="debugData == 'showSelected'">{{ selectedRows }}</pre>
+          <pre v-if="debugData === 'showActives'">{{ actives }}</pre>
         </transition>
       </div>
     </transition>
@@ -292,6 +302,7 @@ export default {
       updates: {},
       deletes: {},
       newrecs: {},
+      actives: {},
       errors: [],
       defaultRec: this.pDefaultRec || {},
       i_gridData: [], //Saved version of original grid data, for reset. //TODO only working at shallow-clone level
@@ -306,7 +317,6 @@ export default {
       flgReadOnly: this.readOnly || false,
       flgShowData: false,
       flgShowPK: false,
-      flgDirty: false,
       flgGridLines: true,
       flgExcelMenu: false,
       flgSendOrigGridOnSave: this.pSendOrigGridOnSave || false,
@@ -382,6 +392,22 @@ export default {
       set: util.debounce(function (newVal) {
         this.filterKey = newVal;
       }, 250),
+    },
+    flgDirty: {
+      get() {
+        let flg = true;
+        if (
+          !Object.keys(this.actives).length &&
+          !Object.keys(this.updates).length &&
+          !Object.keys(this.newrecs).length &&
+          !Object.keys(this.deletes).length
+        )
+          flg = false;
+        return flg;
+      },
+      set(newVal) {
+        return newVal;
+      },
     },
     columns() {
       const vm = this;
@@ -596,6 +622,7 @@ export default {
       for (var idx in reversedIdx) {
         let key = reversedIdx[idx];
         delete this.selectedRows[key]; // Unselect the row here??
+        delete this.actives[key];
         rec = this.filteredData[key];
         if (!rec) continue; // Deleted row ??
         let rec2 = Object.assign({}, rec); // Make a clone
@@ -764,6 +791,13 @@ export default {
         this.defaultRec[col.colName] = defaultVal;
       }
     },
+    isActive: function (row) {
+      if (!this.pk) return false;
+      const pk = row[this.pk];
+      const isActive = this.actives[pk] != null;
+      // console.log(pk + " active: " + isActive);
+      return isActive;
+    },
     resetGrid() {
       // Reset to original condition on page load
       this.deletes = {};
@@ -777,18 +811,41 @@ export default {
       this.$emit("reset");
     },
     saveGrid() {
-      if(!this.flgDirty) return false;
+      if (!this.flgDirty) {
+        this.$emit("noSave");
+        return false;
+      }
       var url = this.urlSaveGrid;
       //const diff = this.diffData();
       var dataGrid = {};
       //dataGrid.data = this.data;
+      // push all active rows into updates if not already there
+      const vm = this;
+      Object.keys(this.actives).forEach((rowIdx) => {
+        const row = vm.filteredData[rowIdx];
+        const pk = row[vm.pk];
+        if (!vm.updates[pk]) {
+          vm.updates[pk] = row;
+        } else {
+          delete vm.actives[rowIdx];
+        }
+      });
+
       dataGrid.gridID = this.gridID;
       dataGrid.updates = this.updates;
       dataGrid.deletes = this.deletes;
       dataGrid.newrecs = this.newrecs;
       // validate grid before save
       let gridErrors = this.validateGrid(dataGrid);
-      if (gridErrors.length !== 0) return false;
+      if (gridErrors.length !== 0) {
+        // remove the updates added by active records collection
+        Object.keys(this.actives).forEach((rowIdx) => {
+          const row = vm.filteredData[rowIdx];
+          const pk = row[vm.pk];
+          delete vm.updates[pk];
+        });
+        return false;
+      }
 
       //remove newrecs from updates collection
       for (let key in dataGrid.newrecs) {
@@ -813,12 +870,13 @@ export default {
             vm.deletes = {};
             vm.updates = {};
             vm.newrecs = {};
+            vm.actives = {};
+            vm.selectedRows = {};
             vm.flgDirty = false;
             // alert("Grid updates saved");
             vm.$nextTick(function () {
               vm.$emit("saveGrid"); //For tracking flgDirty in parent container
             });
-            
           })
           .catch(function (err) {
             alert(err);
@@ -893,6 +951,16 @@ export default {
       }
       this.sortData(sortKey);
     },
+    toggleActive: function (row, idx) {
+      // Add a row to the 'actives' collection.
+      if (!this.actives[idx]) {
+        Vue.set(this.actives, idx, true);
+        this.flgDirty = true;
+      } else {
+        Vue.set(this.actives, idx, false);
+        delete this.actives[idx];
+      }
+    },
     toggleDebug() {
       if (this.flgDebug) this.flgDebug--;
       else this.flgDebug++;
@@ -911,6 +979,7 @@ export default {
     toggleSelectAll() {
       if (Object.keys(this.selectedRows).length) {
         this.selectedRows = {};
+        this.actives = {};
         return false;
       } else {
         const vm = this;
@@ -944,6 +1013,13 @@ export default {
         } else Vue.set(this.selectedRows, idx, newVal);
       } else {
         Vue.set(this.selectedRows, idx, newVal);
+      }
+      // Add all selected rows into the active collection
+      this.actives = {};
+      let selectList = Object.keys(this.selectedRows);
+      for (var idx in selectList) {
+        let key = selectList[idx];
+        Vue.set(this.actives, key, true);
       }
     },
     validateGrid: function (dataGrid) {

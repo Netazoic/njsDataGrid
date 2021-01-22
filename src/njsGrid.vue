@@ -534,7 +534,7 @@ export default {
       // insert at top of stack
       this.data.unshift(rec);
       this.noteAdd(rec, pk);
-      this.flgDirty = true;
+      // this.flgDirty = true;
       this.incrementSelected();
       //Select first element in the row
       const vm = this;
@@ -601,13 +601,13 @@ export default {
     },
     deleteRows() {
       //Clear negative selected rows
+      const vm = this;
       let slctdCount = Object.keys(this.selectedRows).length;
       if (slctdCount == 0) {
         // push the current focusRow into selectedRows
         // focusRow is the idx of the currentently focused row
-        Vue.set(this.selectedRows, this.focusRow, true);
+        vm.$set(this.selectedRows, this.focusRow, true);
       }
-      const vm = this;
       if (slctdCount) {
         Object.keys(this.selectedRows).forEach(function (key, idx) {
           if (!vm.selectedRows[key]) {
@@ -633,9 +633,9 @@ export default {
         rec = this.filteredData[key];
         if (!rec) continue; // Deleted row ??
         let rec2 = Object.assign({}, rec); // Make a clone
-        let pk = rec[pka];
-        Vue.set(this.deletes, pk, rec2);
-        //Vue.set(vm.data, dataIdx, null);
+        let pk = rec2[pka];
+        vm.$set(this.deletes, pk, rec2);
+        //vm.$set(vm.data, dataIdx, null);
         currentDeletes[pk] = rec2;
         //Delete the record from filteredData
         key = key - 0; //convert key to a number
@@ -647,12 +647,13 @@ export default {
       //Don't bother sending deletes for new records -- they aren't in the database anyway
       for (var pk in currentDeletes) {
         if (this.newrecs[pk]) {
-          delete vm.newrecs[pk];
-          delete vm.deletes[pk];
+          vm.$delete(vm.newrecs,pk);  // for reactive changes
+          vm.$delete(vm.deletes,pk);  // for reactive changes
         }
       }
       this.$emit("noteDelete");
-      this.flgDirty = true;
+      vm.$forceUpdate();
+      // this.flgDirty = true;
     },
     diffData() {
       // Does not work -- only a shallow compare
@@ -824,7 +825,7 @@ export default {
       this.selectedRows = {};
       this.sortKey = "";
       this.sortOrders = {};
-      this.flgDirty = false;
+      // this.flgDirty = false;
       this.data = this.i_gridData.slice(0);
       this.$emit("reset");
     },
@@ -890,7 +891,7 @@ export default {
             vm.newrecs = {};
             vm.actives = {};
             vm.selectedRows = {};
-            vm.flgDirty = false;
+            // vm.flgDirty = false;
             // alert("Grid updates saved");
             vm.$nextTick(function () {
               vm.$emit("saveGrid"); //For tracking flgDirty in parent container
@@ -962,8 +963,8 @@ export default {
       let currVal = this.sortOrders[key];
       const newVal = this.sortOrders[key] * -1;
       this.sortOrders[key] = newVal;
-      this.flgDirty = !this.flgDirty; // Trigger the filter/sort function.  For some reason setting new value into sortOrders not working to do this.
-      //Vue.set(this.sortOrders, key, newVal);
+      // this.flgDirty = !this.flgDirty; // Trigger the filter/sort function.  For some reason setting new value into sortOrders not working to do this.
+      //vm.$set(this.sortOrders, key, newVal);
       if (this.flgDebug > 3) {
         console.log(this.sortOrders);
       }
@@ -971,11 +972,12 @@ export default {
     },
     toggleActive: function (row, idx) {
       // Add a row to the 'actives' collection.
+      const vm = this;
       if (!this.actives[idx]) {
-        Vue.set(this.actives, idx, true);
-        this.flgDirty = true;
+        vm.$set(this.actives, idx, true);
+        // this.flgDirty = true;
       } else {
-        Vue.set(this.actives, idx, false);
+        vm.$set(this.actives, idx, false);
         delete this.actives[idx];
       }
     },
@@ -1002,16 +1004,18 @@ export default {
       } else {
         const vm = this;
         this.filteredData.forEach(function (el, idx) {
-          Vue.set(vm.selectedRows, idx, true);
+          vm.$set(vm.selectedRows, idx, true);
         });
+        this.actives = this.selectedRows;
         return true;
       }
     },
     toggleSelectRow(idx, flgCtrl, flgShift) {
       if (this.flgDebug >= 2) console.log(idx);
+      const vm = this;
       const newVal = !this.selectedRows[idx];
       // if (!newVal) {
-      //   Vue.set(this.selectedRows, idx, null);
+      //   vm.$set(this.selectedRows, idx, null);
       //   return;
       // }
       // Clear existing unless flgCtrl, flgShift
@@ -1021,22 +1025,21 @@ export default {
           Object.keys(this.selectedRows).length - 1
         ];
         for (var idxS = lastIdx; idxS <= idx; idxS++) {
-          Vue.set(this.selectedRows, idxS, newVal);
+          vm.$set(this.selectedRows, idxS, newVal);
         }
       } else if (flgCtrl) {
         // Toggle this row in the selected set
         if (!newVal) {
-          Vue.set(this.selectedRows, idx, false);
+          vm.$set(this.selectedRows, idx, false);
           delete this.selectedRows[idx];
-        } else Vue.set(this.selectedRows, idx, newVal);
+        } else vm.$set(this.selectedRows, idx, newVal);
       } else {
-        Vue.set(this.selectedRows, idx, newVal);
+        vm.$set(this.selectedRows, idx, newVal);
       }
       // Add all selected rows into the active collection
       this.actives = {};
-      const vm = this;
       Object.keys(this.selectedRows).forEach(rowIdx=>{
-          Vue.set(vm.actives, rowIdx, true);
+          vm.$set(vm.actives, rowIdx, true);
       });
     },
     validateGrid: function (dataGrid) {
@@ -1106,13 +1109,15 @@ export default {
       }
     },
     noteAdd: function (row, pk) {
+      const vm = this;
       if (!pk) {
-        Vue.set(this.newrecs, this.idxAdd, row);
+        vm.$set(this.newrecs, this.idxAdd, row);
         this.idxAdd++;
-      } else Vue.set(this.newrecs, pk, row);
+      } else vm.$set(this.newrecs, pk, row);
       this.$emit("noteAdd");
     },
     noteUpdate: function (row, col, idx) {
+      const vm = this;
       if (this.flgDebug >= 3) {
         console.log("updated: " + idx + ": " + col.colName);
       }
@@ -1121,9 +1126,9 @@ export default {
         this.$emit("update", row, col, idx);
       }
       const pk = row[this.pk];
-      Vue.set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
+      vm.$set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
       this.$emit("noteUpdate");
-      this.flgDirty = true;
+      // this.flgDirty = true;
     },
   },
   beforeDestroy() {

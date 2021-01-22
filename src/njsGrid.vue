@@ -129,9 +129,13 @@
           <tr>
             <th
               @click="toggleSelectAll"
-              style="width: 2px; min-width: 2px !important"
+              style="width: 55px; min-width: 55px !important"
             >
               row
+              <i
+                class="fa fa-info-circle"
+                @click.stop="showHelp(helpSelect, $event)"
+              />
             </th>
             <th
               v-for="col in columns"
@@ -173,21 +177,22 @@
             :ref="'tr-data-' + idx"
           >
             <td
-  
+              :class="{ 'grid-lines': flgGridLines, error: row.hasError }"
               style="width: 2px; min-width: 2px"
               :tabindex="(idx + 1) * 100"
             >
             <input type="radio" 
+                class="row-select-radio"
                 :id="'active-' + idx"
-                @click.exact.stop="toggleActive(row,idx)"
                 @click.exact="toggleSelectRow(idx,true)"
                 @click.ctrl.exact="toggleSelectRow(idx, true)"
                 @click.shift.exact="toggleSelectRow(idx, false, true)"
-                value=true
+                :value=true
                 v-model="actives[idx]"
              />
+              <span class="row-number">
               {{ idx + recOffset + 1 }}
-
+              </span>
             </td>
             <TD_Element
               v-for="col in columns"
@@ -328,6 +333,7 @@ export default {
       focusRow: undefined,
       focusCol: undefined,
       recLIMIT: 1000,
+      helpSelect: "Select radio button to choose row. Selected rows can be saved for re-loading, or deleted as a batch."
     };
   },
   created() {
@@ -513,7 +519,6 @@ export default {
     },
     addRow: function () {
       this.clearFocus();
-      this.clearSelected();
       let rec = Object.assign({}, this.defaultRec);
       let pk;
 
@@ -530,6 +535,7 @@ export default {
       this.data.unshift(rec);
       this.noteAdd(rec, pk);
       this.flgDirty = true;
+      this.incrementSelected();
       //Select first element in the row
       const vm = this;
       this.$nextTick(() => {
@@ -547,6 +553,7 @@ export default {
     clearSelected: function () {
       this.selectedRows = {};
     },
+
     // function for dynamic sorting
     compareValues(key, order = 1, keyLookup, col) {
       return function (a, b) {
@@ -765,6 +772,17 @@ export default {
     },
     hideHelp() {
       util.hideToolTip();
+    },
+    incrementSelected(){
+      if(Object.keys(this.selectedRows).length == 0) return;
+      let newSelected = {};
+      const vm = this;
+      Object.keys(this.selectedRows).forEach(rowIdx=>{
+        let newIdx = rowIdx-0+1;
+        newSelected[newIdx] = vm.selectedRows[rowIdx];
+      });
+      this.selectedRows = newSelected;
+      this.actives = this.selectedRows;
     },
     initGrid() {
       // this.setGridColumns(this.colDefs);
@@ -1016,11 +1034,10 @@ export default {
       }
       // Add all selected rows into the active collection
       this.actives = {};
-      let selectList = Object.keys(this.selectedRows);
-      for (var idx in selectList) {
-        let key = selectList[idx];
-        Vue.set(this.actives, key, true);
-      }
+      const vm = this;
+      Object.keys(this.selectedRows).forEach(rowIdx=>{
+          Vue.set(vm.actives, rowIdx, true);
+      });
     },
     validateGrid: function (dataGrid) {
       // validate before save
@@ -1293,5 +1310,12 @@ div#div-local-controls button {
 button > i {
   font-size: 16px;
   margin-right: 5px;
+}
+
+input.row-select-radio{
+  margin: 2px;
+}
+span.row-number{
+  padding-left:2px;
 }
 </style>

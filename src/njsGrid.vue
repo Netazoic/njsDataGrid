@@ -628,8 +628,8 @@ export default {
       let reversedIdx = Object.keys(this.selectedRows).reverse();
       for (var idx in reversedIdx) {
         let key = reversedIdx[idx];
-        delete this.selectedRows[key]; // Unselect the row here??
-        delete this.actives[key];
+        vm.$delete(this.selectedRows,key);
+        vm.$delete(this.actives,key);
         rec = this.filteredData[key];
         if (!rec) continue; // Deleted row ??
         let rec2 = Object.assign({}, rec); // Make a clone
@@ -642,7 +642,7 @@ export default {
         this.filteredData.splice(key, 1);
 
         // Delete the record from updates if included in that collections
-        delete this.updates[pk];
+        vm.$delete(this.updates,pk);
       }
       //Don't bother sending deletes for new records -- they aren't in the database anyway
       for (var pk in currentDeletes) {

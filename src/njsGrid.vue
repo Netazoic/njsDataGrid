@@ -91,12 +91,17 @@
         </form>
         <div id="div-filter-controls">
           <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search</span>
+          <div style="border:1px solid black; width:170px; display:inline; padding:2px;">
           <input
             name="query"
             v-model="filterKey_DB"
             @keydown.enter.prevent="nullOp"
             autocomplete="off"
+            class="filter-input"
+            style="border:none !important; "
           />
+          <i class="fa fa-times" @click="clearFilter"/>
+          </div>
           <select class="num-rows-select" v-model="numDispRows">
             <option value="10">10</option>
             <option value="50">50</option>
@@ -222,46 +227,13 @@
       </table>
     </div>
     <div id="ttPopUp" style="position: absolute"></div>
-    <div v-if="flgDebug">
-      <div class="controls">
-        <input type="checkbox" v-model="flgShowPK" @click="togglePK" />
-        <label>Show PK?</label>
-      </div>
-      <div class="controls">
-        <input type="checkbox" v-model="flgShowData" />
-        <label>Show Data</label>
-        <span v-if="flgShowData">
-          <input type="radio" v-model="debugData" value="showData" />data
-          <input
-            type="radio"
-            v-model="debugData"
-            value="showFilteredData"
-          />Filterd
-          <input type="radio" v-model="debugData" value="showUpdates" /> updates
-          <input type="radio" v-model="debugData" value="showNewrecs" /> new
-          recs
-          <input type="radio" v-model="debugData" value="showDeletes" /> deletes
-          <input type="radio" v-model="debugData" value="showSelected" />
-          selected Rows
-          <input type="radio" v-model="debugData" value="showActives" /> Actives
-        </span>
-      </div>
-    </div>
-    <transition name="fade2">
-      <div v-if="flgShowData">
-        <transition name="fade2">
-          <pre v-if="debugData == 'showData'">{{ data }}</pre>
-          <pre v-if="debugData == 'showFilteredData'">{{ filteredData }}</pre>
-        </transition>
-        <transition name="fade2">
-          <pre v-if="debugData == 'showUpdates'">{{ updates }}</pre>
-          <pre v-if="debugData == 'showNewrecs'">{{ newrecs }}</pre>
-          <pre v-if="debugData == 'showDeletes'">{{ deletes }}</pre>
-          <pre v-if="debugData == 'showSelected'">{{ selectedRows }}</pre>
-          <pre v-if="debugData === 'showActives'">{{ actives }}</pre>
-        </transition>
-      </div>
-    </transition>
+    <debug-window :flgShow="flgDebug" :data="data" :newrecs="newrecs" 
+        :updates="updates" :deletes="deletes" 
+        :selectedRows="selectedRows"
+        :filteredData="filteredData"
+        :actives="actives"
+        @togglePK="togglePK"
+        />
   </div>
 </template>
 <script>
@@ -276,6 +248,7 @@ import util from "./lib/util";
 import * as resize from "./lib/resize";
 // Font Awesome
 import "@fortawesome/fontawesome-free/css/all.min.css";
+import DebugWindow from "./components/DebugWindow.vue";
 
 export default {
   name: "njsGrid",
@@ -296,6 +269,7 @@ export default {
   },
   components: {
     TD_Element,
+    DebugWindow,
   },
   data: function () {
     var sortOrders = {};
@@ -314,26 +288,28 @@ export default {
       selectedRows: {},
       sortKey: "",
       numDispRows: this.pDispRows || 100,
-      numAllRecs: 0, // Total # of recs in the database
+      numAllRecs: 0, // Total # of recs retrieved from the database
+      numMaxRecs: 10000, // Maximum number of recs to retrieve from database at any one time
+                        //TODO enforce this limit on DB queries
       xfocusRow: 0,
       flgDebug: 0,
       flgExportEnabled: false,
       flgLocalControls: true,
       flgReadOnly: this.readOnly || false,
-      flgShowData: false,
-      flgShowPK: false,
+
       flgGridLines: true,
       flgExcelMenu: false,
       flgSendOrigGridOnSave: this.pSendOrigGridOnSave || false,
       filterKey: this.filterKey,
       recOffset: 0,
       sortOrders: sortOrders,
-      debugData: "showData",
+
       idxAdd: 0,
       focusRow: undefined,
       focusCol: undefined,
       recLIMIT: 1000,
-      helpSelect: "Select radio button to choose row. Selected rows can be saved for re-loading, or deleted as a batch."
+      helpSelect:
+        "Select radio button to choose row. Selected rows can be saved for re-loading, or deleted as a batch.",
     };
   },
   created() {
@@ -370,6 +346,10 @@ export default {
     filterKey(newVal) {
       this.recOffset = 0;
       if (this.focusRow !== undefined) this.clearFocus();
+      if(this.numAllRecs === this.numMaxRecs){
+        // Query the DB
+        this.getGridData(this.dataURL_Comp, this.dataDef);
+      }
       return newVal;
     },
     dataURL(newVal) {
@@ -377,7 +357,7 @@ export default {
       // console.log(newVal);
     },
     dataURL_Comp() {
-      this.initGrid();
+      
     },
   },
   computed: {
@@ -440,19 +420,7 @@ export default {
           });
         });
       }
-      // Add in any 'new' records, clearing any already in the heroes collection
-      // so we don't get a pk violation.  This keeps new records at the top of the editor.
-      const vm = this;
-      Object.keys(this.newrecs).forEach(function (recIdx, idx) {
-        const newRec = vm.newrecs[recIdx];
-        const foundRec = heroes.find(function (rec, idx) {
-          if (rec.pk === newRec.pk) {
-            heroes.splice(idx, 1); // Clear the rec from heroes
-            return true;
-          }
-        });
-        heroes.unshift(newRec);
-      });
+
       return heroes;
     },
 
@@ -544,7 +512,9 @@ export default {
         const myHasFocus = this.hasFocus();
       });
     },
-
+    clearFilter(){
+      this.filterKey_DB = "";
+    },
     clearFocus: function (idx) {
       this.focusRow = undefined;
       this.focusColumn = undefined;
@@ -628,8 +598,8 @@ export default {
       let reversedIdx = Object.keys(this.selectedRows).reverse();
       for (var idx in reversedIdx) {
         let key = reversedIdx[idx];
-        vm.$delete(this.selectedRows,key);
-        vm.$delete(this.actives,key);
+        vm.$delete(this.selectedRows, key);
+        vm.$delete(this.actives, key);
         rec = this.filteredData[key];
         if (!rec) continue; // Deleted row ??
         let rec2 = Object.assign({}, rec); // Make a clone
@@ -642,13 +612,13 @@ export default {
         this.filteredData.splice(key, 1);
 
         // Delete the record from updates if included in that collections
-        vm.$delete(this.updates,pk);
+        vm.$delete(this.updates, pk);
       }
       //Don't bother sending deletes for new records -- they aren't in the database anyway
       for (var pk in currentDeletes) {
         if (this.newrecs[pk]) {
-          vm.$delete(vm.newrecs,pk);  // for reactive changes
-          vm.$delete(vm.deletes,pk);  // for reactive changes
+          vm.$delete(vm.newrecs, pk); // for reactive changes
+          vm.$delete(vm.deletes, pk); // for reactive changes
         }
       }
       this.$emit("noteDelete");
@@ -774,12 +744,12 @@ export default {
     hideHelp() {
       util.hideToolTip();
     },
-    incrementSelected(){
-      if(Object.keys(this.selectedRows).length == 0) return;
+    incrementSelected() {
+      if (Object.keys(this.selectedRows).length == 0) return;
       let newSelected = {};
       const vm = this;
-      Object.keys(this.selectedRows).forEach(rowIdx=>{
-        let newIdx = rowIdx-0+1;
+      Object.keys(this.selectedRows).forEach((rowIdx) => {
+        let newIdx = rowIdx - 0 + 1;
         newSelected[newIdx] = vm.selectedRows[rowIdx];
       });
       this.selectedRows = newSelected;
@@ -943,9 +913,10 @@ export default {
       }
       // DEBUG
       keyLookup = null; // Testing performance difference
-      this.data = this.data
+      const sortedData = this.data
         .slice()
         .sort(this.compareValues(sortKey, order, keyLookup, col));
+      this.data = sortedData;
     },
     resetRecordOffset(idx) {
       this.recOffset = idx;
@@ -988,14 +959,13 @@ export default {
     toggleExcelMenu() {
       this.flgExcelMenu = !this.flgExcelMenu;
     },
-    togglePK() {
+    togglePK(flgShowPK) {
       // this.flgShowPK = !this.flgShowPK;  -- controlled by v-model
       const pkCol = this.colDefs.find(function (col, idx) {
         return col.pk == true;
       });
-      pkCol.hidden = this.flgShowPK;
+      pkCol.hidden = flgShowPK;
     },
-
     toggleSelectAll() {
       if (Object.keys(this.selectedRows).length) {
         this.selectedRows = {};
@@ -1038,8 +1008,8 @@ export default {
       }
       // Add all selected rows into the active collection
       this.actives = {};
-      Object.keys(this.selectedRows).forEach(rowIdx=>{
-          vm.$set(vm.actives, rowIdx, true);
+      Object.keys(this.selectedRows).forEach((rowIdx) => {
+        vm.$set(vm.actives, rowIdx, true);
       });
     },
     validateGrid: function (dataGrid) {
@@ -1221,11 +1191,11 @@ i.alert-el {
 }
 
 .required > .arrow.asc {
-  border-bottom: 4px solid rgba(255,255,255,0.78);  
+  border-bottom: 4px solid rgba(255, 255, 255, 0.78);
 }
 
 .required > .arrow.dsc {
-  border-bottom: 4px solid rgba(255,255,255,1);  
+  border-bottom: 4px solid rgba(255, 255, 255, 1);
 }
 /*Modal menu*/
 /* The Modal (background) */
@@ -1317,10 +1287,13 @@ button > i {
   margin-right: 5px;
 }
 
-input.row-select-radio{
+input.row-select-radio {
   margin: 2px;
 }
-span.row-number{
-  padding-left:2px;
+input.filter-input:active, input.filter-input:focus {
+  outline:none;
+}
+span.row-number {
+  padding-left: 2px;
 }
 </style>

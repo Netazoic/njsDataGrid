@@ -1,6 +1,6 @@
 <template>
     <transition name="fade2">
-    <div v-if="flgVisible" id="asyncticator"><img id="activity" :src="asyncImg"/></div>
+    <div v-if="flgVisible" id="asyncticator"><img id="activity" :src="asyncImg" class="async-img"/></div>
     </transition>
 </template>
 

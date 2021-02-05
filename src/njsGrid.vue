@@ -1,129 +1,279 @@
 <template>
-<div>
-    <div id="asyncticator-mount"/>
-   <form v-if="flgLocalControls">
-      <button @click.prevent.stop="saveGrid">Save</button> 
-      <button @click.prevent.stop="addRow">Add Row</button>
-      <button @click.prevent.stop="deleteRows">Delete</button>
-      <button @click.prevent.stop="resetGrid">Reset</button>
-      <button @click.prevent.stop="toggleExcelMenu" title="Export grid data" :disabled="!data.length">
-          <i class="fa fas fa-file-excel" 
-          :class="{disabled:!data.length}"
-          title="export grid data as excel file">&nbsp;Export</i></button>
-      <div id="menu-excel" :class="{hidden:!flgExcelMenu, visible:flgExcelMenu}" class="modal">
-        <div class="modal-content">
-        <span class="close" @click="toggleExcelMenu">&times;</span>
-        <button @click.prevent.stop="exportExcelData(false,$event)" ><i class="fas fa-file-export" title="Export columns that are visible in the grid"></i>&nbsp; Filtered</button>
-        <button @click.prevent.stop="exportExcelData(true,$event)" title="export grid data as excel file"><i class="fas fa-file-export" title="Export all data"></i>&nbsp; ALL</button>
+  <div id="njs-wrapper">
+    <div id="asyncticator-mount" />
+    <div id="div-controls-container">
+      <div id="div-local-controls">
+        <form v-if="flgLocalControls">
+          <div id="div-edit-controls" v-if="!flgReadOnly">
+            <button
+              :class="btnClasses"
+              @click.prevent.stop="saveGrid"
+              type="button"
+              title="Save table"
+            >
+              <i
+                class="fa fa-save"
+                :class="{ 'alert-el': flgDirty }"
+              />Save
+            </button>
+            <button
+              :class="btnClasses"
+              @click.prevent.stop="addRow"
+              type="button"
+              title="Add Row"
+            >
+              <i
+                class="fa fa-plus"               
+              />Add Row
+            </button>
+            <button
+              :class="btnClasses"
+              @click.prevent.stop="deleteRows"
+              type="button"
+              title="Delete current row or selected rows"
+            >
+              <i
+                class="fa fa-trash"
+              />Delete Row
+            </button>
+            <button
+              v-if="flgReset"
+              :class="btnClasses"
+              @click.prevent.stop="resetGrid"
+              type="button"
+              title="Revert current unsaved edits and deletes"
+            >
+              <i
+                class="fa fa-redo"
+             />Reset
+            </button>
+            <!-- Custom buttons from the parent component go here -->
+            <slot name="other-buttons"></slot>
+          </div>
+
+          <!-- /#flgLocalControls -->
+          <button
+            @click.prevent.stop="toggleExcelMenu"
+            title="Export grid data"
+            :disabled="!data.length"
+            v-if="flgExportEnabled"
+          >
+            <i
+              class="fa fas fa-file-excel"
+              :class="{ disabled: !data.length }"
+              title="export grid data as excel file"
+              >&nbsp;Export</i
+            >
+          </button>
+          <div
+            id="menu-excel"
+            :class="{ hidden: !flgExcelMenu, visible: flgExcelMenu }"
+            class="modal"
+          >
+            <div class="modal-content">
+              <span class="close" @click="toggleExcelMenu">&times;</span>
+              <button @click.prevent.stop="exportExcelData(false, $event)">
+                <i
+                  class="fas fa-file-export"
+                  title="Export columns that are visible in the grid"
+                ></i
+                >&nbsp; Filtered
+              </button>
+              <button
+                @click.prevent.stop="exportExcelData(true, $event)"
+                title="export grid data as excel file"
+              >
+                <i class="fas fa-file-export" title="Export all data"></i>&nbsp;
+                ALL
+              </button>
+            </div>
+          </div>
+        </form>
+        <div id="div-filter-controls">
+          <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search</span>
+          <div style="border:1px solid black; width:170px; display:inline; padding:2px;">
+          <input
+            name="query"
+            v-model="filterKey_DB"
+            @keydown.enter.prevent="nullOp"
+            autocomplete="off"
+            class="filter-input"
+            style="border:none !important; "
+          />
+          <i class="fa fa-times" @click="clearFilter"/>
+          </div>
+          <select class="num-rows-select" v-model="numDispRows">
+            <option value="10">10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="500">500</option>
+            <option value="-1">All</option>
+          </select>
+          <span class="disp-row-offset-adjustor">
+            <i
+              class="fa fa-caret-left"
+              :class="{ disabled: recOffset == 0 }"
+              @click.stop.prevent="adjustRecordOffset(-1)"
+            ></i>
+            <i
+              class="fa fa-caret-right"
+              :class="{ disabled: upperDispIdx >= numAllRows }"
+              @click.stop.prevent="adjustRecordOffset(1)"
+            ></i>
+          </span>
+          <span class="disp-row-count-selector"
+            >{{ lowerDispIdx }}-{{ upperDispIdx }} of
+            {{ filteredData.length }}</span
+          >
         </div>
       </div>
-      Search <input name="query" v-model="filterKey"/>
-      Rows:
-      <select v-model="numDispRows"><option value="10">10</option><option value="50">50</option><option value="100">100</option><option value="ALL">All</option></select>
-      1-{{ upperDispIdx }} of {{ numAllRows }}
-  </form>
-  <table id='njs-grid'>
-    <thead>
-      <tr>
-        <th @click="toggleSelectAll" style="width:2px;min-width:2px !important;">row</th>
-        <th v-for="col in columns" 
-          :key="col.colName"
-          @click="sortBy(col.colName)"
-          :class="{ active: sortKey == col.colName }"
-
-          :style="{width: col.colWidth + 'px'}"
-          >
-
-          {{ col.colHdr | capitalize }}
-          <span class="arrow" :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'">
-          </span>
-        </th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="(row,idx) in dispData" :key="row[pk]" 
-          class="table-data" 
-          :class="{'selected': selectedRows[idx]==true, 'grid-lines':flgGridLines}"
-          :ref="'tr-data-' + idx">
-        <td @click.exact="toggleSelectRow(idx)" 
-            @click.ctrl.exact="toggleSelectRow(idx,true)"
-            @click.shift.exact="toggleSelectRow(idx,false,true)"
-            style="width:2px;min-width:2px;"
-          :tabindex="((idx+1)*100)">{{idx + 1}}</td>
-        <td v-for="col in columns" :key="col.colName"
-          :tabindex=" ((idx+1) *100) + col.colIdx" 
-          @focus="setFocus(row,col.colName, idx)"
-          ><data-element
-            :hasFocus="hasFocus(idx,col.colName)==true"
-            @focusx="setFocus(row,col.colName, idx)"
-            @blur="clearFocus(idx)"
-            @update="noteUpdate(row,col,idx)"
-            @change="noteUpdate(row,col,idx)"
-            :row="row"
-            :field="col.colName"
-            :rowIdx="idx"
-            :col="col"
-            :ref="'data-element-' + idx + '-' + col.colName"
-            />
-
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div v-if="flgDebug"><input type="checkbox" v-model="flgShowData"/>Show Data  
-      <span v-if="flgShowData"> 
-        <input type="radio" v-model="debugData" value="showData"/>data 
-        <input type="radio" v-model="debugData" value="showFilteredData">Filterd
-        <input type="radio" v-model="debugData" value="showUpdates"/> updates
-        <input type="radio" v-model="debugData" value="showNewrecs"/> new recs
-        <input type="radio" v-model="debugData" value="showDeletes"/> deletes
-        <input type="radio" v-model="debugData" value="showSelected"/> selected Rows
-      </span>
-  </div>
-  <transition name="fade2">
-    <div v-if="flgShowData">
-
-      <transition name="fade2">
-      <pre v-if="debugData == 'showData'">{{data}}</pre>
-      <pre v-if="debugData == 'showFilteredData'">{{filteredData}}</pre>
-      </transition>
-      <transition name="fade2">
-      <pre v-if="debugData == 'showUpdates'">{{updates}}</pre>
-      <pre v-if="debugData == 'showNewrecs'">{{newrecs}}</pre>
-      <pre v-if="debugData == 'showDeletes'">{{deletes}}</pre>
-      <pre v-if="debugData == 'showSelected'">{{selectedRows}}</pre>
-      </transition>
     </div>
-  </transition>
-
-</div>
+    <div id="table-wrapper">
+      <table id="njs-grid">
+        <thead class="table-header">
+          <tr>
+            <th
+              @click="toggleSelectAll"
+              style="width: 55px; min-width: 55px !important"
+            >
+              row
+              <i
+                class="fa fa-info-circle"
+                @click.stop="showHelp(helpSelect, $event)"
+              />
+            </th>
+            <th
+              v-for="col in columns"
+              :key="col.colName"
+              :data-column-name="col.colName"
+              @mouseout="hideHelp"
+              class="njs-th"
+              :class="headerClasses(col.colName, col.headerClasses)"
+              :style="{ width: col.width, 'min-width': col.width }"
+            >
+              <span @click.stop.prevent.exact="sortBy(col.colName)">
+                <span v-html="col.header"></span>
+              </span>
+              <span v-if="col.help"
+                >&nbsp;
+                <i
+                  v-if="col.help"
+                  class="fa fa-info-circle"
+                  @click.stop="showHelp(col.help, $event)"
+                />
+              </span>
+              <span
+                class="arrow"
+                :class="sortOrders[col.colName] > 0 ? 'asc' : 'dsc'"
+                @click.stop.prevent.exact="sortBy(col.colName)"
+              ></span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="table-body">
+          <tr
+            v-for="(row, idx) in dispData"
+            :key="idx"
+            class="table-data"
+            :class="{
+              selected: selectedRows[idx] == true,
+              'grid-lines': flgGridLines,
+            }"
+            :ref="'tr-data-' + idx"
+          >
+            <td
+              :class="{ 'grid-lines': flgGridLines, error: row.hasError }"
+              style="width: 2px; min-width: 2px"
+              :tabindex="(idx + 1) * 100"
+            >
+            <input type="radio" 
+                class="row-select-radio"
+                :id="'active-' + idx"
+                @click.exact="toggleSelectRow(idx,true)"
+                @click.ctrl.exact="toggleSelectRow(idx, true)"
+                @click.shift.exact="toggleSelectRow(idx, false, true)"
+                :value=true
+                v-model="actives[idx]"
+             />
+              <span class="row-number">
+              {{ idx + recOffset + 1 }}
+              </span>
+            </td>
+            <TD_Element
+              v-for="col in columns"
+              :key="col.colName"
+              :class="{ 'grid-lines': flgGridLines, error: col.hasError }"
+              :tabindex="(idx + 1) * 100 + col.colIdx"
+              :hasFocus="hasFocus(idx, col.colIdx)"
+              :error="hasError(idx, col.colName, row[pk])"
+              @focusEl="setFocus(idx, col.colIdx)"
+              @keyup.shift.tab="handleBackTab(row, col, idx, $event)"
+              @keyup.ctrl.down="handleDownArrow(row, col, idx)"
+              @backtab="handleBackTab(row, col, idx)"
+              @ctrldown="handleArrow('down')"
+              @ctrlup="handleArrow('up')"
+              @click.exact.stop="setFocus(idx, col.colIdx)"
+              @blur="clearFocus(idx)"
+              @update="noteUpdate(row, col, idx)"
+              @change="noteUpdate(row, col, idx)"
+              :row="row"
+              :field="col.colName"
+              :rowIdx="idx"
+              :col="col"
+              :ref="'data-element-' + idx + '-' + col.colName"
+            />
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="ttPopUp" style="position: absolute"></div>
+    <debug-window :flgShow="flgDebug" :data="data" :newrecs="newrecs" 
+        :updates="updates" :deletes="deletes" 
+        :selectedRows="selectedRows"
+        :filteredData="filteredData"
+        :actives="actives"
+        @togglePK="togglePK"
+        />
+  </div>
 </template>
 <script>
-import DataElement from "./components/DataElement.vue";
+import TD_Element from "./components/TD_Element.vue";
 import as from "./lib/libAsync";
 import axios from "axios";
 import { stringify } from "querystring";
 import uuid from "uuid/v1";
 import Vue from "vue";
-import moment from "moment";
+import moment, { min } from "moment";
+import util from "./lib/util";
+import * as resize from "./lib/resize";
+// Font Awesome
+import "@fortawesome/fontawesome-free/css/all.min.css";
+import DebugWindow from "./components/DebugWindow.vue";
 
 export default {
   name: "njsGrid",
   props: {
+    gridCode: String,
+    gridID: String,
     pFilter: String,
     colDefs: Array,
     dataURL: String,
     dataDef: Array,
+    readOnly: Boolean,
     pDispRows: Number,
     pDefaultRec: Object,
-    urlSaveGrid: String
+    urlSaveGrid: String,
+    pSendOrigGridOnSave: String,
+    flgReset: Boolean,
+    btnClasses: String,
   },
   components: {
-    DataElement
+    TD_Element,
+    DebugWindow,
   },
-  data: function() {
+  data: function () {
     var sortOrders = {};
-    this.colDefs.forEach(function(col) {
+    this.colDefs.forEach(function (col) {
       sortOrders[col.colName] = 1;
     });
     return {
@@ -131,24 +281,35 @@ export default {
       updates: {},
       deletes: {},
       newrecs: {},
+      actives: {},
+      errors: [],
       defaultRec: this.pDefaultRec || {},
-      i_gridData: [],
+      i_gridData: [], //Saved version of original grid data, for reset. //TODO only working at shallow-clone level
       selectedRows: {},
       sortKey: "",
-      numDispRows: this.pDispRows || 10,
+      numDispRows: this.pDispRows || 100,
+      numAllRecs: 0, // Total # of recs retrieved from the database
+      numMaxRecs: 10000, // Maximum number of recs to retrieve from database at any one time
+                        //TODO enforce this limit on DB queries
       xfocusRow: 0,
-      flgDebug: 1,
+      flgDebug: 0,
+      flgExportEnabled: false,
       flgLocalControls: true,
-      flgShowData: false,
-      flgDirty: false,
+      flgReadOnly: this.readOnly || false,
+
       flgGridLines: true,
       flgExcelMenu: false,
+      flgSendOrigGridOnSave: this.pSendOrigGridOnSave || false,
       filterKey: this.filterKey,
+      recOffset: 0,
       sortOrders: sortOrders,
-      debugData: "showData",
+
       idxAdd: 0,
-      focusRow: 0,
-      focusColumn: 0
+      focusRow: undefined,
+      focusCol: undefined,
+      recLIMIT: 1000,
+      helpSelect:
+        "Select radio button to choose row. Selected rows can be saved for re-loading, or deleted as a batch.",
     };
   },
   created() {
@@ -156,96 +317,134 @@ export default {
     this.initGrid();
     this.initDefaultRec();
   },
+  mounted() {
+    const vm = this;
+    document.addEventListener("ctrl-down", this.handleDownArrow);
+    this.setFixedHeader();
+  },
   watch: {
-    columns(newVal) {
-      console.log("columns updated");
+    colDefs(newVal) {
+      if (!newVal || !newVal.length) return;
+      const vm = this;
+      newVal.forEach(function (col) {
+        vm.sortOrders[col.colName] = 1;
+      });
+      // set the column resize handles after a colDef change
+      // need to wait for a nextTick to allow th elements to be mounted
+
+      this.$nextTick(function () {
+        resize.init(vm, "table-header");
+      });
+    },
+    pDefaultRec(newVal) {
+      this.defaultRec = newVal;
+      this.initDefaultRec();
     },
     pFilter(newVal) {
       this.filterKey = newVal;
     },
-    data(newVal) {
-      // console.log("data: " + newVal);
+    filterKey(newVal) {
+      this.recOffset = 0;
+      if (this.focusRow !== undefined) this.clearFocus();
+      if(this.numAllRecs === this.numMaxRecs){
+        // Query the DB
+        this.getGridData(this.dataURL_Comp, this.dataDef);
+      }
+      return newVal;
     },
     dataURL(newVal) {
-      this.initGrid();
+      // this.initGrid();
+      // console.log(newVal);
     },
-    updates(newVal) {
-      //console.log(newVal);
+    dataURL_Comp() {
+      
     },
-    sortOrders() {
-      // console.log("sortOrders:");
-      // console.log(this.sortOrders);
-    }
   },
   computed: {
+    dataURL_Comp() {
+      let url = this.dataURL;
+      // if(this.numAllRecs >= this.recLIMIT){
+      if (this.filterKey && this.filterKey.length >= 2) {
+        url += "&filterKey=" + this.filterKey;
+      }
+      // }
+      return url;
+    },
+    filterKey_DB: {
+      //De-bounced filterKey
+      get() {
+        return this.filterKey;
+      },
+      set: util.debounce(function (newVal) {
+        this.filterKey = newVal;
+      }, 250),
+    },
+    flgDirty: {
+      get() {
+        let flg = true;
+        if (
+          !Object.keys(this.actives).length &&
+          !Object.keys(this.updates).length &&
+          !Object.keys(this.newrecs).length &&
+          !Object.keys(this.deletes).length
+        )
+          flg = false;
+        return flg;
+      },
+      set(newVal) {
+        return newVal;
+      },
+    },
     columns() {
-      const cols = this.colDefs.filter(function(col, idx) {
+      const vm = this;
+      const cols = this.colDefs.filter(function (col, idx) {
         return col.hidden !== true && col.visible !== false;
+      });
+      //Make sure we have column idxs
+      for (let idx = 0; idx < cols.length; idx++) {
+        cols[idx]["colIdx"] = idx;
+      }
+      this.$nextTick(function () {
+        resize.init(vm, "table-header");
       });
       return cols;
     },
-    filteredData: function() {
-      var sortKey = this.sortKey;
-      var keyLookup = null;
+    filteredData: function () {
       var filterKey = this.filterKey && this.filterKey.toLowerCase();
       var flgDirty = this.flgDirty;
-      var order = this.sortOrders[sortKey] || 1;
       var heroes = this.data;
       if (filterKey) {
-        heroes = heroes.filter(function(row) {
-          return Object.keys(row).some(function(key) {
-            return (
-              String(row[key])
-                .toLowerCase()
-                .indexOf(filterKey) > -1
-            );
+        heroes = heroes.filter(function (row) {
+          return Object.keys(row).some(function (key) {
+            return String(row[key]).toLowerCase().indexOf(filterKey) > -1;
           });
         });
       }
-      if (sortKey) {
-        // heroes = heroes.slice().sort(function(a, b) {
-        //   a = a[sortKey];
-        //   b = b[sortKey];
-        //   return (a === b ? 0 : a > b ? 1 : -1) * order;
-        // });
-        const col = this.colDefs.find(function(el) {
-          return el.colName == sortKey;
-        });
-        if (col.type === "select") {
-          //ruh roh
-          keyLookup = col.options;
-        }
-        heroes = heroes
-          .slice()
-          .sort(this.compareValues(sortKey, order, keyLookup));
-      }
-      //this.flgDirty = false;
+
       return heroes;
     },
 
     dispData() {
-      if (this.numDispRows == "ALL") return this.filteredData;
-      else return this.filteredData.slice(0, this.numDispRows);
+      let dispRecs, upperSliceIdx;
+      if (!this.filteredData || !this.filteredData.length) {
+        return [];
+      }
+      if (this.numDispRows == -1) {
+        //Display all
+        this.resetRecordOffset(0);
+        dispRecs = this.filteredData;
+      } else {
+        upperSliceIdx = this.recOffset + new Number(this.numDispRows);
+        dispRecs = this.filteredData.slice(this.recOffset, upperSliceIdx);
+      }
+      // console.log("dispData:numDispRows: " + this.numDispRows);
+      // console.log("dispRecs length: " + dispRecs.length);
+      // console.log("upperSliceIdx: " + upperSliceIdx);
+      return dispRecs;
     },
 
-    debounce(func, wait, immediate) {
-      var timeout;
-      return function() {
-        debugger;
-        var context = this,
-          args = arguments;
-        var later = function() {
-          timeout = null;
-          if (!immediate) func.apply(context, args);
-        };
-        var callNow = immediate && !timeout;
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-        if (callNow) func.apply(context, args);
-      };
-    },
     pk() {
-      const col = this.colDefs.find(function(el) {
+      const col = this.colDefs.find(function (el) {
         return el.pk;
       });
       if (col) return col.colName;
@@ -255,90 +454,110 @@ export default {
       const numAll = Object.keys(this.filteredData).length;
       return numAll;
     },
+
+    lowerDispIdx() {
+      return this.recOffset + 1;
+    },
     upperDispIdx() {
       let upper;
-      if (this.numDispRows === "ALL") {
+      if (this.numDispRows == -1) {
         // if (isNaN(this.numDispRows)) {
         upper = this.numAllRows;
       } else {
-        if (this.numAllRows < this.numDispRows) {
-          upper = this.numAllRows;
-        } else upper = this.numDispRows;
+        upper = this.recOffset - 0 + (this.numDispRows - 0);
       }
+      if (upper > this.numAllRows) upper = this.numAllRows;
       return upper;
-    }
+    },
   },
   filters: {
-    capitalize: function(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    }
+    capitalize: function (str) {
+      try {
+        if (str == null) return null;
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      } catch (err) {
+        // column has no value for header
+      }
+    },
   },
   methods: {
-    addRow: function() {
-      this.clearSelected();
+    nullOp: function (evt) {
+      // console.log(evt);
+      //nada
+    },
+    addRow: function () {
+      this.clearFocus();
       let rec = Object.assign({}, this.defaultRec);
-      // Set the pk to a uuid
+      let pk;
+
       const colDefs = this.colDefs;
-      const pkCol = colDefs.find(function(col) {
+      const pkCol = colDefs.find(function (col) {
         return col.pk === true;
       });
       if (pkCol) {
-        rec[pkCol.colName] = uuid();
+        // Set the pk to a uuid
+        pk = uuid();
+        rec[pkCol.colName] = pk;
       }
       // insert at top of stack
       this.data.unshift(rec);
-      this.noteAdd(rec);
+      this.noteAdd(rec, pk);
+      // this.flgDirty = true;
+      this.incrementSelected();
       //Select first element in the row
-      //this.tabIndex + "_" + this.col.colName;
-      //const refName = 100 + "_" + this.colDefs[0].colName;
-      //const refName = "tr-data-0";
-      // TODO  select first input not working
-      // find first visible column
-      let col = this.columns.find(col => {
-        return col.hidden !== true;
+      const vm = this;
+      this.$nextTick(() => {
+        vm.setFocus(0, 0);
+        //force a recompute
+        const myHasFocus = this.hasFocus();
       });
-      //TODO figure out how to focus on new row
-      // const refName = "data-element-0-" + col.colName;
-      // var ref = this.$refs[refName];
-      // if (ref) {
-      //   var el = ref[0] ? ref[0] : ref;
-      //   if (!el) {
-      //     debugger;
-      //   }
-      //   if (el.$el) el = el.$el; //vue components
-      //   el.focus();
-      // }
+    },
+    clearFilter(){
+      this.filterKey_DB = "";
+    },
+    clearFocus: function (idx) {
+      this.focusRow = undefined;
+      this.focusColumn = undefined;
     },
 
-    clearFocus: function(idx) {
-      this.focusRow = null;
-      this.focusColumn = null;
-    },
-
-    clearSelected: function() {
+    clearSelected: function () {
       this.selectedRows = {};
     },
+
     // function for dynamic sorting
-    compareValues(key, order = 1, keyLookup) {
-      return function(a, b) {
+    compareValues(key, order = 1, keyLookup, col) {
+      return function (a, b) {
         if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
           // property doesn't exist on either object
           return 0;
         }
-
-        let varA = typeof a[key] === "string" ? a[key].toUpperCase() : a[key];
-        let varB = typeof b[key] === "string" ? b[key].toUpperCase() : b[key];
+        let varA, varB;
+        if (col.type === "string") {
+          varA = a[key].toUpperCase();
+          varB = b[key].toUpperCase();
+        } else if (col.type === "integer") {
+          varA = parseInt(a[key], 10);
+          if (isNaN(varA)) varA = -999999;
+          varB = parseInt(b[key], 10);
+          if (isNaN(varB)) varB = -999999;
+        } else {
+          varA = a[key];
+          varB = b[key];
+        }
+        // let varA = typeof a[key] === "string" ? a[key].toUpperCase() : a[key];
+        // let varB = typeof b[key] === "string" ? b[key].toUpperCase() : b[key];
         if (varA == null) varA = "ZZZZZZZZZ";
         if (varB == null) varB = "ZZZZZZZZZ";
+
         if (keyLookup) {
           //Look up display values in an options list
           if (varA == "" || varB == "") {
             //Don't work so hard
           } else {
-            const optA = keyLookup.find(function(opt) {
+            const optA = keyLookup.find(function (opt) {
               return opt.value == varA;
             });
-            const optB = keyLookup.find(function(opt) {
+            const optB = keyLookup.find(function (opt) {
               return opt.value == varB;
             });
             varA = optA ? optA.label : varA;
@@ -351,40 +570,67 @@ export default {
       };
     },
     deleteRows() {
-      const slctdCount = Object.keys(this.selectedRows).length;
-      if (slctdCount == 0) return;
+      //Clear negative selected rows
+      const vm = this;
+      let slctdCount = Object.keys(this.selectedRows).length;
+      if (slctdCount == 0) {
+        // push the current focusRow into selectedRows
+        // focusRow is the idx of the currentently focused row
+        vm.$set(this.selectedRows, this.focusRow, true);
+      }
+      if (slctdCount) {
+        Object.keys(this.selectedRows).forEach(function (key, idx) {
+          if (!vm.selectedRows[key]) {
+            delete vm.selectedRows[key];
+            slctdCount--;
+          }
+        });
+        if (slctdCount == 0) return;
+      }
       //const flg = confirm("Delete " + slctdCount + " selected rows?");
       const flg = true;
       if (!flg) return;
       var rec;
-      const vm = this;
+
       const pka = this.pk;
       var currentDeletes = {};
-      // Load up the this.deletes collection before we start deleting things
-      for (var idx in this.selectedRows) {
-        delete this.selectedRows[idx]; // Unselect the row here??
-        rec = this.filteredData[idx];
+      // Delete in reverse order
+      let reversedIdx = Object.keys(this.selectedRows).reverse();
+      for (var idx in reversedIdx) {
+        let key = reversedIdx[idx];
+        vm.$delete(this.selectedRows, key);
+        vm.$delete(this.actives, key);
+        rec = this.filteredData[key];
         if (!rec) continue; // Deleted row ??
-        rec = Object.assign({}, rec); // Make a clone
-        if (rec[pka]) Vue.set(this.deletes, rec[pka], rec);
-        //Vue.set(vm.data, dataIdx, null);
-        currentDeletes[rec[pka]] = rec[pka];
+        let rec2 = Object.assign({}, rec); // Make a clone
+        let pk = rec2[pka];
+        vm.$set(this.deletes, pk, rec2);
+        //vm.$set(vm.data, dataIdx, null);
+        currentDeletes[pk] = rec2;
+        //Delete the record from filteredData
+        key = key - 0; //convert key to a number
+        this.filteredData.splice(key, 1);
+
+        // Delete the record from updates if included in that collections
+        vm.$delete(this.updates, pk);
       }
-      // Delete the original rec out of this.data
-      // This will reactively remove the record from this.filteredData;
+      //Don't bother sending deletes for new records -- they aren't in the database anyway
       for (var pk in currentDeletes) {
-        const dataIdx = vm.data.findIndex(function(dataRec, idx) {
-          return dataRec[pka] == pk;
-        });
-        vm.data.splice(dataIdx, 1);
+        if (this.newrecs[pk]) {
+          vm.$delete(vm.newrecs, pk); // for reactive changes
+          vm.$delete(vm.deletes, pk); // for reactive changes
+        }
       }
+      this.$emit("noteDelete");
+      vm.$forceUpdate();
+      // this.flgDirty = true;
     },
     diffData() {
       // Does not work -- only a shallow compare
-      let intersection = this.data.filter(x => {
+      let intersection = this.data.filter((x) => {
         this.i_gridData.includes(x);
       });
-      let difference = this.data.filter(x => !this.i_gridData.includes(x));
+      let difference = this.data.filter((x) => !this.i_gridData.includes(x));
       return difference;
     },
     exportExcelData(flgAll) {
@@ -408,7 +654,7 @@ export default {
       tab_text += "<tr>";
       for (var colIdx in colsExport) {
         col = colsExport[colIdx];
-        tab_text += "<th>" + col.colHdr + "</th>";
+        tab_text += "<th>" + col.header + "</th>";
       }
       tab_text += "</tr>";
       for (j = 0; j < exportData.length; j++) {
@@ -440,26 +686,81 @@ export default {
       } else {
         if (gridDataURL == null) return; // throw new Error("No data url specified");
         const vm = this;
-        this.$http.get(gridDataURL).then(response => {
+
+        this.$http.get(gridDataURL).then((response) => {
           var recs =
             response.data && response.data.items
               ? response.data.items
               : response.data;
           vm.data = recs;
+          if (response.data && response.data.items) {
+            //rsObj
+            vm.numAllRecs = response.data.numRows;
+          } else {
+            vm.numAllRecs = vm.data.length;
+          }
+
           // vm.i_gridData = JSON.parse(JSON.stringify(vm.data)); //Save a copy
           vm.i_gridData = vm.data.slice(0);
         });
       }
     },
-    hasFocus: function(idx, colName) {
-      return this.focusRow == idx && this.focusColumn == colName;
+    handleArrow: function (direction) {
+      let focusRow = this.focusRow;
+      if (direction == "down") focusRow++;
+      else focusRow--;
+      this.setFocus(focusRow, this.focusCol);
+    },
+    handleBackTab: function (row, col, rowIdx, $event) {
+      let newColIdx = col.colIdx - 1;
+      if (newColIdx < 0) newColIdx = 0;
+      // //Set focus to previous column
+      this.setFocus(rowIdx, newColIdx);
+      if (this.flgDebug >= 4)
+        console.log("handleBackTab: focus on " + newColIdx);
+    },
+    hasError: function (idx, colName, rowID) {
+      const err = this.errors.find((err) => {
+        return err.rowID == rowID && err.colName == colName;
+      });
+      return err;
+    },
+    hasFocus: function (idx, colIdx) {
+      if (this.focusRow === idx && this.focusCol === colIdx) {
+        return true;
+      } else return false;
+      return;
+      // return false;
+    },
+    headerClasses(colName, colClassStr) {
+      let classArr;
+      if (colClassStr) classArr = colClassStr.split(" ");
+      else classArr = new Array();
+      if (this.sortKey == colName) {
+        classArr.push("active");
+      }
+      return classArr.join(" ");
+    },
+    hideHelp() {
+      util.hideToolTip();
+    },
+    incrementSelected() {
+      if (Object.keys(this.selectedRows).length == 0) return;
+      let newSelected = {};
+      const vm = this;
+      Object.keys(this.selectedRows).forEach((rowIdx) => {
+        let newIdx = rowIdx - 0 + 1;
+        newSelected[newIdx] = vm.selectedRows[rowIdx];
+      });
+      this.selectedRows = newSelected;
+      this.actives = this.selectedRows;
     },
     initGrid() {
       // this.setGridColumns(this.colDefs);
       this.deletes = {};
       this.updates = {};
       this.newrecs = {};
-      this.getGridData(this.dataURL, this.dataDef);
+      this.getGridData(this.dataURL_Comp, this.dataDef);
     },
     initDefaultRec() {
       if (Object.keys(this.defaultRec).size) return; //Already set
@@ -479,6 +780,13 @@ export default {
         this.defaultRec[col.colName] = defaultVal;
       }
     },
+    isActive: function (row) {
+      if (!this.pk) return false;
+      const pk = row[this.pk];
+      const isActive = this.actives[pk] != null;
+      // console.log(pk + " active: " + isActive);
+      return isActive;
+    },
     resetGrid() {
       // Reset to original condition on page load
       this.deletes = {};
@@ -487,77 +795,199 @@ export default {
       this.selectedRows = {};
       this.sortKey = "";
       this.sortOrders = {};
+      // this.flgDirty = false;
       this.data = this.i_gridData.slice(0);
+      this.$emit("reset");
     },
     saveGrid() {
+      if (!this.flgDirty) {
+        this.$emit("noSave");
+        return false;
+      }
       var url = this.urlSaveGrid;
       //const diff = this.diffData();
       var dataGrid = {};
       //dataGrid.data = this.data;
+      // push all active rows into updates if not already there
+      const vm = this;
+      Object.keys(this.actives).forEach((rowIdx) => {
+        const row = vm.filteredData[rowIdx];
+        const pk = row[vm.pk];
+        if (!vm.updates[pk]) {
+          vm.updates[pk] = row;
+        } else {
+          delete vm.actives[rowIdx];
+        }
+      });
+
+      dataGrid.gridID = this.gridID;
       dataGrid.updates = this.updates;
       dataGrid.deletes = this.deletes;
       dataGrid.newrecs = this.newrecs;
+      // validate grid before save
+      let gridErrors = this.validateGrid(dataGrid);
+      if (gridErrors.length !== 0) {
+        // remove the updates added by active records collection
+        Object.keys(this.actives).forEach((rowIdx) => {
+          const row = vm.filteredData[rowIdx];
+          const pk = row[vm.pk];
+          delete vm.updates[pk];
+        });
+        return false;
+      }
+
+      //remove newrecs from updates collection
+      for (let key in dataGrid.newrecs) {
+        delete dataGrid.updates[key];
+      }
+      if (this.flgSendOrigGridOnSave) {
+        dataGrid.origGrid = this.i_gridData;
+      }
       if (!url) {
         this.$emit("saveGrid", dataGrid);
       } else {
         var fd = new FormData();
         fd.append("dataGrid", JSON.stringify(dataGrid));
-        var fLoad = function(ret) {
-          alert("Grid updates saved");
+        var fLoad = function (ret) {
+          // nada
         };
         var fErr = null;
-        as.xhrSubmit(fd, url, fLoad, fErr).catch(function(err) {
-          alert(err);
-        });
+        const vm = this;
+        as.xhrSubmit(fd, url, fLoad, fErr)
+          .then(function (ret) {
+            // Clear the collections on a successful save
+            vm.deletes = {};
+            vm.updates = {};
+            vm.newrecs = {};
+            vm.actives = {};
+            vm.selectedRows = {};
+            // vm.flgDirty = false;
+            // alert("Grid updates saved");
+            vm.$nextTick(function () {
+              vm.$emit("saveGrid"); //For tracking flgDirty in parent container
+            });
+          })
+          .catch(function (err) {
+            alert(err);
+          });
       }
     },
+    setFixedHeader() {
+      document
+        .getElementById("table-wrapper")
+        .addEventListener("scroll", function () {
+          var translate = "translate(0," + this.scrollTop + "px)";
+          this.querySelector("thead").style.transform = translate;
+        });
+    },
 
-    setFocus: function(row, colName, idx) {
-      if (this.flgDebug >= 4)
-        console.log(
-          "setFocus: " + idx + ":" + colName + ":: " + this.xfocusRow
-        );
-      if (this.xfocusRow != idx) {
+    setFocus: function (rowIdx, colIdx) {
+      if (this.xfocusRow != rowIdx) {
         this.clearFocus();
       }
-      this.xfocusRow = idx;
-      this.focusRow = idx;
-      this.focusColumn = colName;
-      //ref="'data-element-' + idx + '-' + col.colName"
-      const myHasFocus = this.hasFocus(idx, colName);
+      this.xfocusRow = rowIdx;
+      this.focusRow = rowIdx;
+      this.focusCol = colIdx;
+      //ref="'data-element-' + rowIdx + '-' + col.colName"
+      const myHasFocus = this.hasFocus(rowIdx, colIdx);
+      if (this.flgDebug >= 5)
+        console.log(
+          "setFocus: " + rowIdx + ":" + colIdx + ":: " + this.xfocusRow
+        );
     },
 
-    sortBy: function(key) {
+    showHelp(helpText, evt) {
+      const tgt = evt.target;
+      util.showToolTip(helpText, evt);
+      //alert(helpText);
+    },
+    sortData(sortKey) {
+      let keyLookup;
+      const order = this.sortOrders[sortKey] || 1;
+      const col = this.colDefs.find(function (el) {
+        return el.colName == sortKey;
+      });
+      if (col.type === "select") {
+        //ruh roh
+        keyLookup = col.options;
+      }
+      // DEBUG
+      keyLookup = null; // Testing performance difference
+      const sortedData = this.data
+        .slice()
+        .sort(this.compareValues(sortKey, order, keyLookup, col));
+      this.data = sortedData;
+    },
+    resetRecordOffset(idx) {
+      this.recOffset = idx;
+    },
+    adjustRecordOffset: function (direction) {
+      // direction is 1 or -1
+      let offset = this.recOffset + this.numDispRows * direction;
+      offset = offset < 0 ? 0 : offset;
+      this.recOffset = offset;
+    },
+    sortBy: function (key) {
+      this.clearFocus();
       this.sortKey = key;
       var sortKey = key;
       let currVal = this.sortOrders[key];
       const newVal = this.sortOrders[key] * -1;
       this.sortOrders[key] = newVal;
-      this.flgDirty = !this.flgDirty; // Trigger the filter/sort function.  For some reason setting new value into sortOrders not working to do this.
-      //Vue.set(this.sortOrders, key, newVal);
+      // this.flgDirty = !this.flgDirty; // Trigger the filter/sort function.  For some reason setting new value into sortOrders not working to do this.
+      //vm.$set(this.sortOrders, key, newVal);
       if (this.flgDebug > 3) {
         console.log(this.sortOrders);
       }
+      this.sortData(sortKey);
+    },
+    toggleActive: function (row, idx) {
+      // Add a row to the 'actives' collection.
+      const vm = this;
+      if (!this.actives[idx]) {
+        vm.$set(this.actives, idx, true);
+        // this.flgDirty = true;
+      } else {
+        vm.$set(this.actives, idx, false);
+        delete this.actives[idx];
+      }
+    },
+    toggleDebug() {
+      if (this.flgDebug) this.flgDebug--;
+      else this.flgDebug++;
     },
     toggleExcelMenu() {
       this.flgExcelMenu = !this.flgExcelMenu;
     },
-
+    togglePK(flgShowPK) {
+      // this.flgShowPK = !this.flgShowPK;  -- controlled by v-model
+      const pkCol = this.colDefs.find(function (col, idx) {
+        return col.pk == true;
+      });
+      pkCol.hidden = flgShowPK;
+    },
     toggleSelectAll() {
       if (Object.keys(this.selectedRows).length) {
         this.selectedRows = {};
+        this.actives = {};
         return false;
       } else {
         const vm = this;
-        this.filteredData.forEach(function(el, idx) {
-          Vue.set(vm.selectedRows, idx, true);
+        this.filteredData.forEach(function (el, idx) {
+          vm.$set(vm.selectedRows, idx, true);
         });
+        this.actives = this.selectedRows;
         return true;
       }
     },
     toggleSelectRow(idx, flgCtrl, flgShift) {
       if (this.flgDebug >= 2) console.log(idx);
+      const vm = this;
       const newVal = !this.selectedRows[idx];
+      // if (!newVal) {
+      //   vm.$set(this.selectedRows, idx, null);
+      //   return;
+      // }
       // Clear existing unless flgCtrl, flgShift
       if (!flgCtrl && !flgShift) this.selectedRows = {}; // re-init
       if (flgShift) {
@@ -565,30 +995,116 @@ export default {
           Object.keys(this.selectedRows).length - 1
         ];
         for (var idxS = lastIdx; idxS <= idx; idxS++) {
-          Vue.set(this.selectedRows, idxS, newVal);
+          vm.$set(this.selectedRows, idxS, newVal);
         }
       } else if (flgCtrl) {
         // Toggle this row in the selected set
-        // TODO not working?
-        // debugger;
-        Vue.set(this.selectedRows, idx, newVal);
+        if (!newVal) {
+          vm.$set(this.selectedRows, idx, false);
+          delete this.selectedRows[idx];
+        } else vm.$set(this.selectedRows, idx, newVal);
       } else {
-        Vue.set(this.selectedRows, idx, newVal);
+        vm.$set(this.selectedRows, idx, newVal);
+      }
+      // Add all selected rows into the active collection
+      this.actives = {};
+      Object.keys(this.selectedRows).forEach((rowIdx) => {
+        vm.$set(vm.actives, rowIdx, true);
+      });
+    },
+    validateGrid: function (dataGrid) {
+      // validate before save
+      const vm = this;
+      try {
+        let uniqueValsMap = {};
+        let combinedErrMap = [];
+        this.errors = [];
+        const checkRecs = Object.assign(dataGrid.updates, dataGrid.newrecs);
+        Object.keys(checkRecs).forEach(function (k, idx) {
+          let rec = checkRecs[k];
+          let recErrMap = util.validateRecord(
+            rec,
+            vm.colDefs,
+            vm.data,
+            uniqueValsMap
+          );
+          if (recErrMap.length) {
+            let errRec = { rowID: k, rowIdx: idx, errMap: recErrMap };
+            combinedErrMap.push(errRec);
+          }
+        });
+        if (combinedErrMap.length) {
+          // recreate the errors collection.
+          // Each error rec looks like { rowIdx, colIdx, errMsg}
+          for (let idx = 0; idx < combinedErrMap.length; idx++) {
+            let errRecM = combinedErrMap[idx];
+            let rowIdx = errRecM.rowIdx;
+            let rowID = errRecM.rowID;
+            let errMap = errRecM.errMap;
+            for (let j = 0; j < errMap.length; j++) {
+              let map = errMap[j];
+              map = map.split(":");
+              let errRec = {};
+              errRec.rowID = rowID;
+              errRec.rowIdx = rowIdx;
+              errRec.colIdx = map[1].trim() - 0;
+              errRec.errMsg = map[5].trim();
+              errRec.colName = map[2].trim();
+              this.errors.push(errRec);
+            }
+          }
+          // Sort the errors by row number
+          this.errors = this.errors.reverse();
+
+          let errMsg = "";
+          for (let idx = 0; idx < this.errors.length; idx++) {
+            let err = this.errors[idx];
+            // Find the grid row number in current grid data
+            let rowNum = vm.filteredData.findIndex((rec, idx) => {
+              return rec[vm.pk] == err.rowID;
+            });
+            rowNum = rowNum + 1; // zero-based
+            errMsg +=
+              "Row " + rowNum + ": " + err.colName + " - " + err.errMsg + "\n";
+          }
+          errMsg =
+            "Errors found while saving this grid. Please see highlighted cells.\r\n\r\n" +
+            errMsg;
+          alert(errMsg);
+        }
+        return combinedErrMap;
+      } catch (err) {
+        alert(err);
+        return false;
       }
     },
-    noteAdd: function(row, col, idx) {
-      Vue.set(this.newrecs, this.idxAdd, row);
-      this.idxAdd++;
+    noteAdd: function (row, pk) {
+      const vm = this;
+      if (!pk) {
+        vm.$set(this.newrecs, this.idxAdd, row);
+        this.idxAdd++;
+      } else vm.$set(this.newrecs, pk, row);
+      this.$emit("noteAdd");
     },
-    noteUpdate: function(row, col, idx) {
+    noteUpdate: function (row, col, idx) {
+      const vm = this;
       if (this.flgDebug >= 3) {
         console.log("updated: " + idx + ": " + col.colName);
       }
       //this.updates.push(row);   // If we are using an array
+      if (col.onUpdate) {
+        this.$emit("update", row, col, idx);
+      }
       const pk = row[this.pk];
-      Vue.set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
-    }
-  }
+      vm.$set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
+      this.$emit("noteUpdate");
+      // this.flgDirty = true;
+    },
+  },
+  beforeDestroy() {
+    const vm = this;
+    resize.tearDown(vm);
+  },
 };
 </script>
 
@@ -600,8 +1116,7 @@ body {
 }
 
 table {
-  border: 2px solid #7a8d84;
-  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.54);
   background-color: #fff;
 }
 
@@ -613,6 +1128,7 @@ th {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  padding: 4px 8px;
 }
 tr.grid-lines {
   border-bottom: 1px solid grey;
@@ -621,11 +1137,14 @@ tr.grid-lines {
 td {
   background-color: #f9f9f9;
 }
+td.grid-lines {
+  border: 1px solid grey;
+}
 
 th,
 td {
-  min-width: 120px;
-  padding: 4px 8px;
+  min-width: 20px;
+  /* padding: 4px 8px; */
 }
 
 th.active {
@@ -667,6 +1186,17 @@ tr.selected td {
   border-top: 4px solid #fff;
 }
 
+i.alert-el {
+  color: red;
+}
+
+.required > .arrow.asc {
+  border-bottom: 4px solid rgba(255, 255, 255, 0.78);
+}
+
+.required > .arrow.dsc {
+  border-bottom: 4px solid rgba(255, 255, 255, 1);
+}
 /*Modal menu*/
 /* The Modal (background) */
 .modal {
@@ -705,6 +1235,16 @@ tr.selected td {
   text-decoration: none;
   cursor: pointer;
 }
+.disp-row-count-selector {
+  min-width: 500px;
+}
+.disp-row-offset-adjustor {
+  font-size: 24px;
+  margin-left: 2px;
+}
+.disp-row-offset-adjustor > i {
+  margin: 0 10px;
+}
 .fa.disabled,
 .fa[disabled],
 .disabled > .fa,
@@ -720,5 +1260,40 @@ tr.selected td {
 }
 .visible {
   display: block;
+}
+.num-rows-select {
+  margin-left: 5px;
+}
+div#div-controls-container {
+  display: flex;
+  align-items: flex-start;
+}
+div#div-local-controls {
+  display: flex;
+  flex: 1 1 auto;
+  padding-top: 5px;
+}
+div#div-filter-controls {
+  flex: 1 1 auto;
+  margin-left: 10px;
+  padding-bottom: 5px;
+}
+div#div-local-controls button {
+  margin: 0 5px;
+}
+
+button > i {
+  font-size: 16px;
+  margin-right: 5px;
+}
+
+input.row-select-radio {
+  margin: 2px;
+}
+input.filter-input:active, input.filter-input:focus {
+  outline:none;
+}
+span.row-number {
+  padding-left: 2px;
 }
 </style>

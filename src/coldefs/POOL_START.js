@@ -11,7 +11,7 @@ export const colDefs = [
     },
     {
         colName: "poolcode",
-        colHdr: "Pool Code",
+        header: "Pool Code",
         colIdx: 1,
         editable: true,
         type: 'select',
@@ -21,7 +21,7 @@ export const colDefs = [
     },
     {
         colName: "startdate",
-        colHdr: "Start Date",
+        header: "Start Date",
         colIdx: 2,
         displayField: 'startdate',
         type: "date",
@@ -29,14 +29,14 @@ export const colDefs = [
     },
     {
         colName: "availablefrom",
-        colHdr: "Available From",
+        header: "Available From",
         colIdx: 3,
         type: "timestamp",
         required: true
     },
     {
         colName: "availableto",
-        colHdr: "Availble To",
+        header: "Availble To",
         colIdx: 4,
         type: "timestamp",
         get: "checkAvailableDates"

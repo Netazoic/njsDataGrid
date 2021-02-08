@@ -13,6 +13,21 @@ export function init(vm, headerClass, bodyClass) {
     }
 }
 
+function debounce(func, wait, immediate) {
+    var timeout;
+    return function() {
+        var context = this, args = arguments;
+        var later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        };
+        var callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
+};
+
 export function setResizeGrips(vm) {
 
     const headerCols = Array.from(vm.header.getElementsByTagName("th"));
@@ -96,13 +111,14 @@ function onMouseDown(e) {
     const elm = e.target.parentNode;
     vm.thElm = elm;
     vm.startOffset = vm.thElm.offsetWidth - e.pageX;
-    elm.addEventListener("mousemove", onMouseMove.bind(vm));
-    elm.addEventListener("mouseup", onMouseUp.bind(vm));
+    document.addEventListener("mousemove", onMouseMove.bind(vm));
+    document.addEventListener("mouseup", onMouseUp.bind(vm));
 }
 
 function onMouseMove(e) {
     e.preventDefault();
     e.stopPropagation();
+    console.log("mouseMove: " + e);
     const vm = this;
     if (vm.thElm) {
         const width = vm.startOffset + e.pageX;
@@ -118,8 +134,8 @@ function onMouseUp(e) {
     e.preventDefault();
     e.stopPropagation();
     const elm = e.target.parentNode;
-    elm.removeEventListener("mousemove", onMouseMove);
-    elm.removeEventListener("mouseup", onMouseUp);
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
     const widths = getColumnWidths(vm);
     localStorage.setItem(vm.resizeStorageKey, widths);
     vm.thElm = undefined;

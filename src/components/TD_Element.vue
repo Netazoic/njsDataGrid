@@ -194,7 +194,8 @@ export default {
             const slctdOpt = this.col.options.find(function(el) {
               return el.value == baseVal;
             });
-            if (!slctdOpt) dispVal = "value not found";
+            // if (!slctdOpt) dispVal = "value not found";
+            if(!slctdOpt) dispVal = baseVal;
             else dispVal = slctdOpt.label;
           }
           break;

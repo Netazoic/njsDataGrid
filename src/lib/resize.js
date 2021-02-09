@@ -118,7 +118,7 @@ function onMouseDown(e) {
 function onMouseMove(e) {
     e.preventDefault();
     e.stopPropagation();
-    console.log("mouseMove: " + e);
+    //console.log("mouseMove: " + e);
     const vm = this;
     if (vm.thElm) {
         const width = vm.startOffset + e.pageX;

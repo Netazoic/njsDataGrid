@@ -356,7 +356,9 @@ export default {
       // this.initGrid();
       // console.log(newVal);
     },
-    dataURL_Comp() {
+    dataURL_Comp(newVal) {
+      console.log(newVal);
+      this.initGrid();
       
     },
   },

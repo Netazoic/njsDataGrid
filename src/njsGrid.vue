@@ -353,13 +353,12 @@ export default {
       return newVal;
     },
     dataURL(newVal) {
-      // this.initGrid();
+      this.initGrid();
       // console.log(newVal);
     },
     dataURL_Comp(newVal) {
-      console.log(newVal);
-      this.initGrid();
-      
+      // this.initGrid();
+      // console.log(newVal);     
     },
   },
   computed: {

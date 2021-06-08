@@ -290,7 +290,7 @@ export default {
       numDispRows: this.pDispRows || 100,
       numAllRecs: 0, // Total # of recs retrieved from the database
       numMaxRecs: 10000, // Maximum number of recs to retrieve from database at any one time
-                        //TODO enforce this limit on DB queries
+      //TODO enforce this limit on DB queries
       xfocusRow: 0,
       flgDebug: 0,
       flgExportEnabled: false,
@@ -346,7 +346,7 @@ export default {
     filterKey(newVal) {
       this.recOffset = 0;
       if (this.focusRow !== undefined) this.clearFocus();
-      if(this.numAllRecs === this.numMaxRecs){
+      if (this.numAllRecs === this.numMaxRecs) {
         // Query the DB
         this.getGridData(this.dataURL_Comp, this.dataDef);
       }
@@ -358,7 +358,7 @@ export default {
     },
     dataURL_Comp(newVal) {
       // this.initGrid();
-      // console.log(newVal);     
+      // console.log(newVal);
     },
   },
   computed: {
@@ -384,7 +384,6 @@ export default {
       get() {
         let flg = true;
         if (
-          !Object.keys(this.actives).length &&
           !Object.keys(this.updates).length &&
           !Object.keys(this.newrecs).length &&
           !Object.keys(this.deletes).length
@@ -424,15 +423,15 @@ export default {
       // Add newrecs to top of filteredData
       let newrecs = this.newrecs;
       let pk = this.pk;
-      Object.keys(newrecs).forEach((k,idx) =>{
+      Object.keys(newrecs).forEach((k, idx) => {
         const rec = newrecs[k];
         let recPK = rec[pk];
-        let dupRec = heroes.find((rec,idx)=>{
+        let dupRec = heroes.find((rec, idx) => {
           return rec[pk] == recPK;
         });
-        if(!dupRec){
+        if (!dupRec) {
           heroes.unshift(newrecs[k]);
-        } 
+        }
       });
 
       return heroes;
@@ -526,7 +525,7 @@ export default {
         const myHasFocus = this.hasFocus();
       });
     },
-    clearFilter(){
+    clearFilter() {
       this.filterKey_DB = "";
     },
     clearFocus: function (idx) {
@@ -554,7 +553,7 @@ export default {
           if (isNaN(varA)) varA = -999999;
           varB = parseInt(b[key], 10);
           if (isNaN(varB)) varB = -999999;
-        } else if (col.type === "numeric" ) {
+        } else if (col.type === "numeric") {
           varA = parseFloat(a[key]);
           if (isNaN(varA)) varA = -999999;
           varB = parseFloat(b[key]);
@@ -612,7 +611,6 @@ export default {
       var rec;
 
       const pka = this.pk;
-      var currentDeletes = {};
       // Delete in reverse order
       let reversedIdx = Object.keys(this.selectedRows).reverse();
       for (var idx in reversedIdx) {
@@ -622,24 +620,26 @@ export default {
         rec = this.filteredData[key];
         if (!rec) continue; // Deleted row ??
         let rec2 = Object.assign({}, rec); // Make a clone
-        let pk = rec2[pka];
-        vm.$set(this.deletes, pk, rec2);
-        //vm.$set(vm.data, dataIdx, null);
-        currentDeletes[pk] = rec2;
-        //Delete the record from filteredData
-        key = key - 0; //convert key to a number
-        this.filteredData.splice(key, 1);
+        const pkDel = rec2[pka];
+        vm.$set(this.deletes, pkDel, rec2);
+ 
+        // Find the record in this.data and delete it!
+        let idxData = 0;
+        let rec3 = this.data.find((rec, idx) => {
+          idxData = idx;
+          return rec[pka] === pkDel;
+        });
+        vm.$delete(this.data, idxData);
 
         // Delete the record from updates if included in that collections
-        vm.$delete(this.updates, pk);
-      }
-      //Don't bother sending deletes for new records -- they aren't in the database anyway
-      for (var pk in currentDeletes) {
-        if (this.newrecs[pk]) {
-          vm.$delete(vm.newrecs, pk); // for reactive changes
-          vm.$delete(vm.deletes, pk); // for reactive changes
+        vm.$delete(this.updates, pkDel);
+        //Don't bother sending deletes for new records -- they aren't in the database anyway
+        if (this.newrecs[pkDel]) {
+          vm.$delete(vm.newrecs, pkDel); // for reactive changes
+          vm.$delete(vm.deletes, pkDel); // for reactive changes
         }
       }
+
       this.$emit("noteDelete");
       vm.$forceUpdate();
       // this.flgDirty = true;
@@ -874,6 +874,20 @@ export default {
         const vm = this;
         as.xhrSubmit(fd, url, fLoad, fErr)
           .then(function (ret) {
+            // Update newrecs with IDs coming from DB
+            // ret.data should be a map of newrec.uuIDs -> db PKs
+            if(ret.data){
+              let pkNR;
+              let idxData;
+              for(let uuid in ret.data){
+                pkNR = ret.data[uuid];
+                let rec = vm.data.find((rec,idx)=>{
+                  idxData = idx;
+                  return rec[vm.pk] === uuid;
+                });
+                rec[vm.pk] = pkNR;
+              }
+            }
             // Clear the collections on a successful save
             vm.deletes = {};
             vm.updates = {};
@@ -1309,8 +1323,9 @@ button > i {
 input.row-select-radio {
   margin: 2px;
 }
-input.filter-input:active, input.filter-input:focus {
-  outline:none;
+input.filter-input:active,
+input.filter-input:focus {
+  outline: none;
 }
 span.row-number {
   padding-left: 2px;

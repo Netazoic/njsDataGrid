@@ -160,7 +160,7 @@ div.debug-window {
   top: 40%;
   left: 50%;
   margin-top: 0px;
-  margin-left: 100px;
+  margin-left: 400px;
   /* top: 50%;
   left: 50%;
   margin-top: -263px;

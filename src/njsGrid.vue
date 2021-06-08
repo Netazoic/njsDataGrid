@@ -421,6 +421,19 @@ export default {
           });
         });
       }
+      // Add newrecs to top of filteredData
+      let newrecs = this.newrecs;
+      let pk = this.pk;
+      Object.keys(newrecs).forEach((k,idx) =>{
+        const rec = newrecs[k];
+        let recPK = rec[pk];
+        let dupRec = heroes.find((rec,idx)=>{
+          return rec[pk] == recPK;
+        });
+        if(!dupRec){
+          heroes.unshift(newrecs[k]);
+        } 
+      });
 
       return heroes;
     },
@@ -536,10 +549,15 @@ export default {
         if (col.type === "string") {
           varA = a[key].toUpperCase();
           varB = b[key].toUpperCase();
-        } else if (col.type === "integer") {
+        } else if (col.type === "integer" || col.type.startsWith("int")) {
           varA = parseInt(a[key], 10);
           if (isNaN(varA)) varA = -999999;
           varB = parseInt(b[key], 10);
+          if (isNaN(varB)) varB = -999999;
+        } else if (col.type === "numeric" ) {
+          varA = parseFloat(a[key]);
+          if (isNaN(varA)) varA = -999999;
+          varB = parseFloat(b[key]);
           if (isNaN(varB)) varB = -999999;
         } else {
           varA = a[key];

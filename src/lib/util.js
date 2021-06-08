@@ -173,8 +173,13 @@ function validateRecord(record, gridColumns, gridData, existingValsMap) {
             if (gc.maxLen != null && gc.maxLen > 0 && recVal != null) {
                 let intLen = recVal.length;
                 if (gc.maxLen < intLen) {
+                    // Check to see if this is a PK column with a temporary UUID
+                    if(intLen == 36 && gc.pk==true){
+                        //nada
+                    }else{
                     errMap.push(errPrefix + recVal
                         + ": Value longer than maximum length for this column -- " + gc.maxLen);
+                    }
                 }
 
             }

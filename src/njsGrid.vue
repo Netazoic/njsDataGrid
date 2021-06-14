@@ -545,7 +545,7 @@ export default {
           return 0;
         }
         let varA, varB;
-        if (col.type === "string") {
+        if (col.type === "string" || col.type === "varchar") {
           varA = a[key].toUpperCase();
           varB = b[key].toUpperCase();
         } else if (col.type === "integer" || col.type.startsWith("int")) {

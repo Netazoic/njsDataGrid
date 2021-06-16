@@ -11,10 +11,7 @@
               type="button"
               title="Save table"
             >
-              <i
-                class="fa fa-save"
-                :class="{ 'alert-el': flgDirty }"
-              />Save
+              <i class="fa fa-save" :class="{ 'alert-el': flgDirty }" />Save
             </button>
             <button
               :class="btnClasses"
@@ -22,9 +19,7 @@
               type="button"
               title="Add Row"
             >
-              <i
-                class="fa fa-plus"               
-              />Add Row
+              <i class="fa fa-plus" />Add Row
             </button>
             <button
               :class="btnClasses"
@@ -32,9 +27,7 @@
               type="button"
               title="Delete current row or selected rows"
             >
-              <i
-                class="fa fa-trash"
-              />Delete Row
+              <i class="fa fa-trash" />Delete Row
             </button>
             <button
               v-if="flgReset"
@@ -43,9 +36,7 @@
               type="button"
               title="Revert current unsaved edits and deletes"
             >
-              <i
-                class="fa fa-redo"
-             />Reset
+              <i class="fa fa-redo" />Reset
             </button>
             <!-- Custom buttons from the parent component go here -->
             <slot name="other-buttons"></slot>
@@ -91,17 +82,26 @@
         </form>
         <div id="div-filter-controls">
           <span @click.ctrl.alt.shift.stop.prevent="toggleDebug">Search</span>
-          <div style="border:1px solid black; width:170px; display:inline; padding:2px;">
-          <input
-            name="query"
-            v-model="filterKey_DB"
-            @keydown.enter.prevent="nullOp"
-            autocomplete="off"
-            class="filter-input"
-            style="border:none !important; "
-          />
-          <i class="fa fa-times" @click="clearFilter"/>
+          <div
+            style="
+              border: 1px solid black;
+              width: 170px;
+              display: inline;
+              padding: 2px;
+            "
+          >
+            <input
+              name="query"
+              v-model="filterKey_DB"
+              @keydown.enter.prevent="setFilter"
+              autocomplete="off"
+              class="filter-input"
+              style="border: none !important"
+            />
+            <i class="fa fa-times " @click="clearFilter" />
+            
           </div>
+          <button class="fa fa-filter icon-button" @click="setFilter" @keydown.enter.prevent="setFilter" />
           <select class="num-rows-select" v-model="numDispRows">
             <option value="10">10</option>
             <option value="50">50</option>
@@ -186,17 +186,18 @@
               style="width: 2px; min-width: 2px"
               :tabindex="(idx + 1) * 100"
             >
-            <input type="radio" 
+              <input
+                type="radio"
                 class="row-select-radio"
                 :id="'active-' + idx"
-                @click.exact="toggleSelectRow(idx,true)"
+                @click.exact="toggleSelectRow(idx, true)"
                 @click.ctrl.exact="toggleSelectRow(idx, true)"
                 @click.shift.exact="toggleSelectRow(idx, false, true)"
-                :value=true
+                :value="true"
                 v-model="actives[idx]"
-             />
+              />
               <span class="row-number">
-              {{ idx + recOffset + 1 }}
+                {{ idx + recOffset + 1 }}
               </span>
             </td>
             <TD_Element
@@ -227,13 +228,17 @@
       </table>
     </div>
     <div id="ttPopUp" style="position: absolute"></div>
-    <debug-window :flgShow="flgDebug" :data="data" :newrecs="newrecs" 
-        :updates="updates" :deletes="deletes" 
-        :selectedRows="selectedRows"
-        :filteredData="filteredData"
-        :actives="actives"
-        @togglePK="togglePK"
-        />
+    <debug-window
+      :flgShow="flgDebug"
+      :data="data"
+      :newrecs="newrecs"
+      :updates="updates"
+      :deletes="deletes"
+      :selectedRows="selectedRows"
+      :filteredData="filteredData"
+      :actives="actives"
+      @togglePK="togglePK"
+    />
   </div>
 </template>
 <script>
@@ -278,6 +283,7 @@ export default {
     });
     return {
       data: [],
+      filteredData: [],
       updates: {},
       deletes: {},
       newrecs: {},
@@ -301,6 +307,7 @@ export default {
       flgExcelMenu: false,
       flgSendOrigGridOnSave: this.pSendOrigGridOnSave || false,
       filterKey: this.filterKey,
+      filterKey_DB: "",
       recOffset: 0,
       sortOrders: sortOrders,
 
@@ -371,15 +378,22 @@ export default {
       // }
       return url;
     },
-    filterKey_DB: {
-      //De-bounced filterKey
-      get() {
-        return this.filterKey;
-      },
-      set: util.debounce(function (newVal) {
-        this.filterKey = newVal;
-      }, 250),
-    },
+    // filterKey_DB: {
+    //   //De-bounced filterKey
+    //   get() {
+    //     return this.filterKey;
+    //   },
+    //   set: function(newVal) {
+    //     console.log(this.filterKey_DB);
+    //     // return newVal;
+    //     //nada; see setFilter
+    //     /*
+    //     util.debounce(function (newVal) {
+    //       this.filterKey = newVal;
+    //     }, 250);
+    //     */
+    //   },
+    // },
     flgDirty: {
       get() {
         let flg = true;
@@ -409,33 +423,33 @@ export default {
       });
       return cols;
     },
-    filteredData: function () {
-      var filterKey = this.filterKey && this.filterKey.toLowerCase();
-      var flgDirty = this.flgDirty;
-      var heroes = this.data;
-      if (filterKey) {
-        heroes = heroes.filter(function (row) {
-          return Object.keys(row).some(function (key) {
-            return String(row[key]).toLowerCase().indexOf(filterKey) > -1;
-          });
-        });
-      }
-      // Add newrecs to top of filteredData
-      let newrecs = this.newrecs;
-      let pk = this.pk;
-      Object.keys(newrecs).forEach((k, idx) => {
-        const rec = newrecs[k];
-        let recPK = rec[pk];
-        let dupRec = heroes.find((rec, idx) => {
-          return rec[pk] == recPK;
-        });
-        if (!dupRec) {
-          heroes.unshift(newrecs[k]);
-        }
-      });
+    // filteredData: function () {
+    //   var filterKey = this.filterKey && this.filterKey.toLowerCase();
+    //   var flgDirty = this.flgDirty;
+    //   var heroes = this.data;
+    //   if (filterKey) {
+    //     heroes = heroes.filter(function (row) {
+    //       return Object.keys(row).some(function (key) {
+    //         return String(row[key]).toLowerCase().indexOf(filterKey) > -1;
+    //       });
+    //     });
+    //   }
+    //   // Add newrecs to top of filteredData
+    //   let newrecs = this.newrecs;
+    //   let pk = this.pk;
+    //   Object.keys(newrecs).forEach((k, idx) => {
+    //     const rec = newrecs[k];
+    //     let recPK = rec[pk];
+    //     let dupRec = heroes.find((rec, idx) => {
+    //       return rec[pk] == recPK;
+    //     });
+    //     if (!dupRec) {
+    //       heroes.unshift(newrecs[k]);
+    //     }
+    //   });
 
-      return heroes;
-    },
+    //   return heroes;
+    // },
 
     dispData() {
       let dispRecs, upperSliceIdx;
@@ -527,6 +541,12 @@ export default {
     },
     clearFilter() {
       this.filterKey_DB = "";
+      this.filterKey = "";
+      this.filterData(this.filterKey);
+    },
+    setFilter() {
+      this.filterKey = this.filterKey_DB;
+      this.filterData(this.filterKey);
     },
     clearFocus: function (idx) {
       this.focusRow = undefined;
@@ -622,7 +642,7 @@ export default {
         let rec2 = Object.assign({}, rec); // Make a clone
         const pkDel = rec2[pka];
         vm.$set(this.deletes, pkDel, rec2);
- 
+
         // Find the record in this.data and delete it!
         let idxData = 0;
         let rec3 = this.data.find((rec, idx) => {
@@ -697,7 +717,33 @@ export default {
       this.toggleExcelMenu();
       return sa;
     },
+    filterData(fk) {
+      var filterKey = fk && fk.toLowerCase();
+      var flgDirty = this.flgDirty;
+      var heroes = this.data;
+      if (filterKey) {
+        heroes = heroes.filter(function (row) {
+          return Object.keys(row).some(function (key) {
+            return String(row[key]).toLowerCase().indexOf(filterKey) > -1;
+          });
+        });
+      }
+      // Add newrecs to top of filteredData
+      let newrecs = this.newrecs;
+      let pk = this.pk;
+      Object.keys(newrecs).forEach((k, idx) => {
+        const rec = newrecs[k];
+        let recPK = rec[pk];
+        let dupRec = heroes.find((rec, idx) => {
+          return rec[pk] == recPK;
+        });
+        if (!dupRec) {
+          heroes.unshift(newrecs[k]);
+        }
+      });
 
+      this.filteredData = heroes;
+    },
     getGridData(gridDataURL, dataDef) {
       if (dataDef) {
         this.gridData = dataDef;
@@ -712,6 +758,7 @@ export default {
               ? response.data.items
               : response.data;
           vm.data = recs;
+          vm.filterData();
           if (response.data && response.data.items) {
             //rsObj
             vm.numAllRecs = response.data.numRows;
@@ -876,12 +923,12 @@ export default {
           .then(function (ret) {
             // Update newrecs with IDs coming from DB
             // ret.data should be a map of newrec.uuIDs -> db PKs
-            if(ret.data){
+            if (ret.data) {
               let pkNR;
               let idxData;
-              for(let uuid in ret.data){
+              for (let uuid in ret.data) {
                 pkNR = ret.data[uuid];
-                let rec = vm.data.find((rec,idx)=>{
+                let rec = vm.data.find((rec, idx) => {
                   idxData = idx;
                   return rec[vm.pk] === uuid;
                 });
@@ -1222,7 +1269,10 @@ tr.selected td {
 i.alert-el {
   color: red;
 }
-
+ button.icon-button {
+   padding:3px;
+   margin: 1px 4px 1px 4px;
+ }
 .required > .arrow.asc {
   border-bottom: 4px solid rgba(255, 255, 255, 0.78);
 }

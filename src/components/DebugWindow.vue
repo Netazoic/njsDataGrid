@@ -41,7 +41,7 @@
       <div v-if="flgShowData" style="height:600px; max-height:600px; overflow:auto;">
         <transition name="fade2">
           <pre v-if="debugData == 'showData'">{{ data }}</pre>
-          <pre v-if="debugData == 'showFilteredData'">{{ filteredData }}</pre>
+          <pre v-if="debugData == 'showFilteredData'">{{ heroes }}</pre>
         </transition>
         <transition name="fade2">
           <pre v-if="debugData == 'showUpdates'">{{ updates }}</pre>
@@ -65,7 +65,7 @@ export default {
     "flgShow",
     "file",
     "data",
-    "filteredData",
+    "heroes",
     "updates",
     "newrecs",
     "deletes",
@@ -95,8 +95,8 @@ export default {
       if (newVal) {
         this.$nextTick(function () {
           if(!this.observer) this.initObserver();
-          console.debug(this.ref);
-          console.debug(this.$refs);
+          // console.debug(this.ref);
+          // console.debug(this.$refs);
           
         });
         window.addEventListener("keyup", this.keyPress);

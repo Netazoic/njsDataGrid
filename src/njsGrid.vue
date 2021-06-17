@@ -123,7 +123,7 @@
           </span>
           <span class="disp-row-count-selector"
             >{{ lowerDispIdx }}-{{ upperDispIdx }} of
-            {{ filteredData.length }}</span
+            {{ heroes.length }}</span
           >
         </div>
       </div>
@@ -235,7 +235,7 @@
       :updates="updates"
       :deletes="deletes"
       :selectedRows="selectedRows"
-      :filteredData="filteredData"
+      :heroes="heroes"
       :actives="actives"
       @togglePK="togglePK"
     />
@@ -283,7 +283,7 @@ export default {
     });
     return {
       data: [],
-      filteredData: [],
+      heroes: [],
       updates: {},
       deletes: {},
       newrecs: {},
@@ -423,7 +423,7 @@ export default {
       });
       return cols;
     },
-    // filteredData: function () {
+    // heroes: function () {
     //   var filterKey = this.filterKey && this.filterKey.toLowerCase();
     //   var flgDirty = this.flgDirty;
     //   var heroes = this.data;
@@ -434,7 +434,7 @@ export default {
     //       });
     //     });
     //   }
-    //   // Add newrecs to top of filteredData
+    //   // Add newrecs to top of heroes
     //   let newrecs = this.newrecs;
     //   let pk = this.pk;
     //   Object.keys(newrecs).forEach((k, idx) => {
@@ -453,16 +453,16 @@ export default {
 
     dispData() {
       let dispRecs, upperSliceIdx;
-      if (!this.filteredData || !this.filteredData.length) {
+      if (!this.heroes || !this.heroes.length) {
         return [];
       }
       if (this.numDispRows == -1) {
         //Display all
         this.resetRecordOffset(0);
-        dispRecs = this.filteredData;
+        dispRecs = this.heroes;
       } else {
         upperSliceIdx = this.recOffset + new Number(this.numDispRows);
-        dispRecs = this.filteredData.slice(this.recOffset, upperSliceIdx);
+        dispRecs = this.heroes.slice(this.recOffset, upperSliceIdx);
       }
       // console.log("dispData:numDispRows: " + this.numDispRows);
       // console.log("dispRecs length: " + dispRecs.length);
@@ -478,7 +478,7 @@ export default {
       else return null;
     },
     numAllRows() {
-      const numAll = Object.keys(this.filteredData).length;
+      const numAll = Object.keys(this.heroes).length;
       return numAll;
     },
 
@@ -531,6 +531,7 @@ export default {
       this.noteAdd(rec, pk);
       // this.flgDirty = true;
       this.incrementSelected();
+      this.filterData(this.filterKey);
       //Select first element in the row
       const vm = this;
       this.$nextTick(() => {
@@ -637,7 +638,7 @@ export default {
         let key = reversedIdx[idx];
         vm.$delete(this.selectedRows, key);
         vm.$delete(this.actives, key);
-        rec = this.filteredData[key];
+        rec = this.heroes[key];
         if (!rec) continue; // Deleted row ??
         let rec2 = Object.assign({}, rec); // Make a clone
         const pkDel = rec2[pka];
@@ -655,10 +656,12 @@ export default {
         vm.$delete(this.updates, pkDel);
         //Don't bother sending deletes for new records -- they aren't in the database anyway
         if (this.newrecs[pkDel]) {
-          vm.$delete(vm.newrecs, pkDel); // for reactive changes
-          vm.$delete(vm.deletes, pkDel); // for reactive changes
+          vm.$delete(vm.newrecs, pkDel); // Don't bother sending the new record, it is now deleted
+          vm.$delete(vm.deletes, pkDel); // Don't bother sending deletes for new records
         }
       }
+      // Re-filter the data
+      this.filterData(this.filterKey);
 
       this.$emit("noteDelete");
       vm.$forceUpdate();
@@ -673,7 +676,7 @@ export default {
       return difference;
     },
     exportExcelData(flgAll) {
-      const exportData = flgAll ? this.data : this.filteredData;
+      const exportData = flgAll ? this.data : this.heroes;
       if (!exportData || !exportData.length) {
         this.toggleExcelMenu();
         return;
@@ -720,29 +723,29 @@ export default {
     filterData(fk) {
       var filterKey = fk && fk.toLowerCase();
       var flgDirty = this.flgDirty;
-      var heroes = this.data;
+      var localHeroes = this.data;
       if (filterKey) {
-        heroes = heroes.filter(function (row) {
+        localHeroes = localHeroes.filter(function (row) {
           return Object.keys(row).some(function (key) {
             return String(row[key]).toLowerCase().indexOf(filterKey) > -1;
           });
         });
       }
-      // Add newrecs to top of filteredData
+      // Add newrecs to top of heroes
       let newrecs = this.newrecs;
       let pk = this.pk;
       Object.keys(newrecs).forEach((k, idx) => {
         const rec = newrecs[k];
         let recPK = rec[pk];
-        let dupRec = heroes.find((rec, idx) => {
+        let dupRec = localHeroes.find((rec, idx) => {
           return rec[pk] == recPK;
         });
         if (!dupRec) {
-          heroes.unshift(newrecs[k]);
+          localHeroes.unshift(newrecs[k]);
         }
       });
 
-      this.filteredData = heroes;
+      this.heroes = localHeroes;
     },
     getGridData(gridDataURL, dataDef) {
       if (dataDef) {
@@ -863,6 +866,7 @@ export default {
       this.sortOrders = {};
       // this.flgDirty = false;
       this.data = this.i_gridData.slice(0);
+      this.filterData(this.filterKey);
       this.$emit("reset");
     },
     saveGrid() {
@@ -877,7 +881,7 @@ export default {
       // push all active rows into updates if not already there
       const vm = this;
       Object.keys(this.actives).forEach((rowIdx) => {
-        const row = vm.filteredData[rowIdx];
+        const row = vm.heroes[rowIdx];
         const pk = row[vm.pk];
         if (!vm.updates[pk]) {
           vm.updates[pk] = row;
@@ -895,7 +899,7 @@ export default {
       if (gridErrors.length !== 0) {
         // remove the updates added by active records collection
         Object.keys(this.actives).forEach((rowIdx) => {
-          const row = vm.filteredData[rowIdx];
+          const row = vm.heroes[rowIdx];
           const pk = row[vm.pk];
           delete vm.updates[pk];
         });
@@ -926,13 +930,13 @@ export default {
             if (ret.data) {
               let pkNR;
               let idxData;
-              for (let uuid in ret.data) {
-                pkNR = ret.data[uuid];
+              let newrecs = ret.data["newrecs"];
+              for (let uuid in newrecs) {
+                pkNR = newrecs[uuid];
                 let rec = vm.data.find((rec, idx) => {
-                  idxData = idx;
                   return rec[vm.pk] === uuid;
                 });
-                rec[vm.pk] = pkNR;
+                if(rec) rec[vm.pk] = pkNR;
               }
             }
             // Clear the collections on a successful save
@@ -997,6 +1001,7 @@ export default {
         .slice()
         .sort(this.compareValues(sortKey, order, keyLookup, col));
       this.data = sortedData;
+      this.filterData(this.filterKey);
     },
     resetRecordOffset(idx) {
       this.recOffset = idx;
@@ -1053,7 +1058,7 @@ export default {
         return false;
       } else {
         const vm = this;
-        this.filteredData.forEach(function (el, idx) {
+        this.heroes.forEach(function (el, idx) {
           vm.$set(vm.selectedRows, idx, true);
         });
         this.actives = this.selectedRows;
@@ -1140,7 +1145,7 @@ export default {
           for (let idx = 0; idx < this.errors.length; idx++) {
             let err = this.errors[idx];
             // Find the grid row number in current grid data
-            let rowNum = vm.filteredData.findIndex((rec, idx) => {
+            let rowNum = vm.heroes.findIndex((rec, idx) => {
               return rec[vm.pk] == err.rowID;
             });
             rowNum = rowNum + 1; // zero-based
@@ -1257,13 +1262,13 @@ tr.selected td {
 .arrow.asc {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-bottom: 4px solid #fff;
+  border-bottom: 4px solid ;
 }
 
 .arrow.dsc {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 4px solid #fff;
+  border-top: 4px solid ;
 }
 
 i.alert-el {
@@ -1278,7 +1283,7 @@ i.alert-el {
 }
 
 .required > .arrow.dsc {
-  border-bottom: 4px solid rgba(255, 255, 255, 1);
+  border-top: 4px solid rgba(255, 255, 255, 1);
 }
 /*Modal menu*/
 /* The Modal (background) */

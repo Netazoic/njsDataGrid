@@ -66,9 +66,9 @@ export default {
       let componentTop = Math.min(component.$el.offsetTop, topVal);
       // calc the top of the suggestions window
       let topCalc = componentTop + component.$el.clientHeight;
-      console.log("window.height: " + height);
-      console.log("top of suggestions list in window: " + topCalc);
-      console.log("dropdownList.height: " + dropdownList.clientHeight);
+      // console.log("window.height: " + height);
+      // console.log("top of suggestions list in window: " + topCalc);
+      // console.log("dropdownList.height: " + dropdownList.clientHeight);
 
       const modalBottom = topCalc +  dropdownList.clientHeight;
 

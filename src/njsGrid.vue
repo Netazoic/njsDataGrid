@@ -522,9 +522,11 @@ export default {
         return col.pk === true;
       });
       if (pkCol) {
-        // Set the pk to a uuid
-        pk = uuid();
-        rec[pkCol.colName] = pk;
+        // Set the pk to a uuid if it is type java.lang.numeric
+        if(pkCol.dataTypeClass === "java.lang.numeric" || pkCol.dataTypeClass === "java.lang.Integer"){
+          pk = uuid();
+          rec[pkCol.colName] = pk;
+        }
       }
       // insert at top of stack
       this.data.unshift(rec);

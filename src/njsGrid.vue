@@ -98,10 +98,13 @@
               class="filter-input"
               style="border: none !important"
             />
-            <i class="fa fa-times " @click="clearFilter" />
-            
+            <i class="fa fa-times" @click="clearFilter" />
           </div>
-          <button class="fa fa-filter icon-button" @click="setFilter" @keydown.enter.prevent="setFilter" />
+          <button
+            class="fa fa-filter icon-button"
+            @click="setFilter"
+            @keydown.enter.prevent="setFilter"
+          />
           <select class="num-rows-select" v-model="numDispRows">
             <option value="10">10</option>
             <option value="50">50</option>
@@ -122,8 +125,7 @@
             ></i>
           </span>
           <span class="disp-row-count-selector"
-            >{{ lowerDispIdx }}-{{ upperDispIdx }} of
-            {{ heroes.length }}</span
+            >{{ lowerDispIdx }}-{{ upperDispIdx }} of {{ heroes.length }}</span
           >
         </div>
       </div>
@@ -726,13 +728,33 @@ export default {
       var filterKey = fk && fk.toLowerCase();
       var flgDirty = this.flgDirty;
       var localHeroes = this.data;
+      var colOpts = {};
+
       if (filterKey) {
+        let col;
+        for (let colKey in this.colDefs) {
+          // Load up a columnOptions object
+          col = this.colDefs[colKey];
+          if (col.options) {
+            colOpts[col.colName] = col.options;
+          }
+        }
         localHeroes = localHeroes.filter(function (row) {
           return Object.keys(row).some(function (key) {
-            return String(row[key]).toLowerCase().indexOf(filterKey) > -1;
+            const rowVal = String(row[key]).toLowerCase();
+            if (colOpts[key]) {
+              const opt = colOpts[key].find(function (o) {
+                return o.value.toLowerCase() == rowVal;
+              });
+              if(opt) return opt.label.toLowerCase().indexOf(filterKey) > -1;
+              else return rowVal.indexOf(filterKey) > -1;
+            } else {
+              return rowVal.indexOf(filterKey) > -1;
+            }
           });
         });
       }
+
       // Add newrecs to top of heroes
       let newrecs = this.newrecs;
       let pk = this.pk;
@@ -938,7 +960,7 @@ export default {
                 let rec = vm.data.find((rec, idx) => {
                   return rec[vm.pk] === uuid;
                 });
-                if(rec) rec[vm.pk] = pkNR;
+                if (rec) rec[vm.pk] = pkNR;
               }
             }
             // Clear the collections on a successful save
@@ -1264,22 +1286,22 @@ tr.selected td {
 .arrow.asc {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-bottom: 4px solid ;
+  border-bottom: 4px solid;
 }
 
 .arrow.dsc {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 4px solid ;
+  border-top: 4px solid;
 }
 
 i.alert-el {
   color: red;
 }
- button.icon-button {
-   padding:3px;
-   margin: 1px 4px 1px 4px;
- }
+button.icon-button {
+  padding: 3px;
+  margin: 1px 4px 1px 4px;
+}
 .required > .arrow.asc {
   border-bottom: 4px solid rgba(255, 255, 255, 0.78);
 }

@@ -168,7 +168,7 @@ export default {
         : this.col.colName;
       const baseVal = this.row[displayField];
       let dispVal;
-      switch (this.col.type) {
+      switch (this.col.editor) {
         case "idx":
           dispVal = this.rowIdx;
           break;

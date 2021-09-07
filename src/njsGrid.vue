@@ -571,8 +571,8 @@ export default {
         }
         let varA, varB;
         if (col.type === "string" || col.type === "varchar") {
-          varA = a[key].toUpperCase();
-          varB = b[key].toUpperCase();
+          varA = a[key]?a[key].toUpperCase():null;
+          varB = b[key]?b[key].toUpperCase():null;
         } else if (col.type === "integer" || col.type.startsWith("int")) {
           varA = parseInt(a[key], 10);
           if (isNaN(varA)) varA = -999999;

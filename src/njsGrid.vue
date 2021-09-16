@@ -402,7 +402,7 @@ export default {
         if (
           !Object.keys(this.updates).length &&
           !Object.keys(this.newrecs).length &&
-          !Object.keys(this.deletes).length
+          !Object.keys(this.deletes).length 
         )
           flg = false;
         return flg;
@@ -894,7 +894,7 @@ export default {
       this.$emit("reset");
     },
     saveGrid() {
-      if (!this.flgDirty) {
+      if (!this.flgDirty && !this.actives) {
         this.$emit("noSave");
         return false;
       }

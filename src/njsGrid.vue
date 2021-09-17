@@ -744,9 +744,9 @@ export default {
             const rowVal = String(row[key]).toLowerCase();
             if (colOpts[key]) {
               const opt = colOpts[key].find(function (o) {
-                return o.value.toLowerCase() == rowVal;
+                return o.value != null && o.value.toLowerCase() == rowVal;
               });
-              if(opt) return opt.label.toLowerCase().indexOf(filterKey) > -1;
+              if(opt) return opt.label!=null && opt.label.toLowerCase().indexOf(filterKey) > -1;
               else return rowVal.indexOf(filterKey) > -1;
             } else {
               return rowVal.indexOf(filterKey) > -1;

@@ -14,7 +14,8 @@ module.exports = {
             alias: {
                 'vue$': 'vue/dist/vue.esm.js' // 'vue/dist/vue.common.js' for webpack 1
             }
-        }
+        },
+        devtool: 'source-map'
     },
     chainWebpack: config => {
         config.externals({
@@ -28,8 +29,5 @@ module.exports = {
             );
         config.plugins.delete('hmr');
         config.optimization.delete('splitChunks');
-    },
-    configureWebpack: {
-        devtool: 'source-map'
     }
 };

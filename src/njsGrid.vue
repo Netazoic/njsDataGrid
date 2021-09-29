@@ -858,9 +858,11 @@ export default {
     initDefaultRec() {
       if (Object.keys(this.defaultRec).size) return; //Already set
       let col;
+      let defaultVal;
       for (let idx in this.colDefs) {
         col = this.colDefs[idx];
-        let defaultVal;
+        defaultVal = (this.defaultRec[col.colName]);
+        if(defaultVal) continue;  // Default value already set
         if (col.default) defaultVal = col.default;
         else if (col.type == "date") {
           var d = new Date(new Date().setHours(0, 0, 0.0));

@@ -133,11 +133,11 @@ function onMouseMove(e) {
 }
 function onMouseUp(e) {
     const vm = this;
+    const elm = vm.thElm;
+    if(!elm) return;
     e.preventDefault();
     e.stopPropagation();
     // const elm = e.target.parentNode;
-    const elm = vm.thElm;
-    if(!elm) return;
     document.removeEventListener("mousemove", onMouseMove);
     document.removeEventListener("mouseup", onMouseUp);
     const widths = getColumnWidths(vm);

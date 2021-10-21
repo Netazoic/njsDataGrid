@@ -79,8 +79,8 @@ export function tearDown(vm) {
         grip.removeEventListener("mousedown", onMouseDown);
         grip.removeEventListener("click", onClick);
     });
-    // document.removeEventListener("mousemove", onMouseMove);
-    // document.removeEventListener("mouseup", onMouseUp);
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
 }
 
 //  --------------------  End of exported functions
@@ -116,10 +116,12 @@ function onMouseDown(e) {
 }
 
 function onMouseMove(e) {
+    const vm = this;
+    const elm = vm.thElm;
+    if(!elm) return;
     e.preventDefault();
     e.stopPropagation();
     //console.log("mouseMove: " + e);
-    const vm = this;
     if (vm.thElm) {
         const width = vm.startOffset + e.pageX;
         const colName = vm.thElm.dataset.columnName;
@@ -133,7 +135,9 @@ function onMouseUp(e) {
     const vm = this;
     e.preventDefault();
     e.stopPropagation();
-    const elm = e.target.parentNode;
+    // const elm = e.target.parentNode;
+    const elm = vm.thElm;
+    if(!elm) return;
     document.removeEventListener("mousemove", onMouseMove);
     document.removeEventListener("mouseup", onMouseUp);
     const widths = getColumnWidths(vm);

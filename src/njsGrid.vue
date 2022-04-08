@@ -1207,6 +1207,7 @@ export default {
         this.$emit("update", row, col, idx);
       }
       const pk = row[this.pk];
+      if(pk==null) return;  // Can't update a row with a null pk. Most likely this is a new record already part of the vm.newrecs
       vm.$set(this.updates, pk, row); // Only use with an object. Do this with an array if you want an array with a million null entries
       this.$emit("noteUpdate");
       // this.flgDirty = true;
